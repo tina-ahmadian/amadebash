@@ -75,6 +75,31 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, loginType = 'admin' }) =
           localStorage.setItem('authToken', 'demo-token-' + Date.now());
         }
         
+        // For responder login, fetch accidents list
+        if (loginType === 'responder') {
+          try {
+            const accidentsResponse = await fetch('/api/api/v1/accidents', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token || 'demo-token'}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (accidentsResponse.ok) {
+              const accidentsData = await accidentsResponse.json();
+              console.log('Accidents fetched successfully:', accidentsData);
+              // Store accidents data in localStorage for later use
+              localStorage.setItem('accidentsData', JSON.stringify(accidentsData));
+            } else {
+              console.warn('Failed to fetch accidents:', accidentsResponse.status);
+            }
+          } catch (error) {
+            console.error('Error fetching accidents:', error);
+            // Don't block login if accidents fetch fails
+          }
+        }
+        
         setIsLoading(false);
         onLogin();
       } else {

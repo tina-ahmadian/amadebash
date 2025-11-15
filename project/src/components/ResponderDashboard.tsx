@@ -1,29 +1,100 @@
-import React, { useState } from 'react';
-import { Bell, MapPin, Clock, CheckCircle, XCircle, Navigation, LogOut } from 'lucide-react';
-import { useMapContext } from '../context/MapContext';
+import React, { useState, useEffect } from 'react';
+import { Bell, MapPin, Clock, LogOut } from 'lucide-react';
 import Map from './Map';
+import { Alert } from '../data/mockData';
 
 const ResponderDashboard: React.FC = () => {
-  const { alerts, updateAlertStatus } = useMapContext();
-  const [selectedAlert, setSelectedAlert] = useState<string | null>(null);
-  const [gpsActive, setGpsActive] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleAccept = (alertId: string) => {
-    updateAlertStatus(alertId, 'accepted');
-    setGpsActive(true);
-    setTimeout(() => {
-      alert('GPS فعال شد. در مسیر حادثه هستید.');
-    }, 300);
-  };
+  // Fetch accidents from API
+  useEffect(() => {
+    const fetchAccidents = async () => {
+      try {
+        setIsLoading(true);
+        const token = localStorage.getItem('authToken');
+        
+        if (!token) {
+          console.warn('No auth token found for fetching accidents');
+          setIsLoading(false);
+          return;
+        }
 
-  const handleReject = (alertId: string) => {
-    updateAlertStatus(alertId, 'rejected');
-    alert('اعلان رد شد');
-  };
+        const response = await fetch('/api/api/v1/accidents', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
+        if (!response.ok) {
+          throw new Error(`Failed to fetch accidents: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Responder Dashboard - Accidents API Response:', data);
+        console.log('Responder Dashboard - Response type:', typeof data);
+        console.log('Responder Dashboard - Is Array?', Array.isArray(data));
+        console.log('Responder Dashboard - data.data exists?', data.data);
+        console.log('Responder Dashboard - data.success?', data.success);
+        
+        // Handle different possible response structures
+        let accidentsData = [];
+        if (data.success && Array.isArray(data.data)) {
+          accidentsData = data.data;
+          console.log('Responder Dashboard - Using data.data path');
+        } else if (Array.isArray(data.data)) {
+          accidentsData = data.data;
+          console.log('Responder Dashboard - Using data.data path (no success flag)');
+        } else if (Array.isArray(data)) {
+          accidentsData = data;
+          console.log('Responder Dashboard - Using data directly');
+        } else if (data.accidents && Array.isArray(data.accidents)) {
+          accidentsData = data.accidents;
+          console.log('Responder Dashboard - Using data.accidents path');
+        }
+        
+        console.log('Responder Dashboard - Accidents count:', accidentsData.length);
+        console.log('Responder Dashboard - First accident:', accidentsData[0]);
+        
+        // Map API data to Alert structure
+        const mappedAlerts: Alert[] = accidentsData.map((accident: any) => ({
+          id: accident.id?.toString() || `${Date.now()}-${Math.random()}`,
+          title: accident.title || 'بدون عنوان',
+          description: accident.description || '',
+          incidentType: accident.type || 'سایر',
+          targetGender: accident.gender_of_involved || 'male',
+          location: {
+            lat: accident.latitude || 0,
+            lng: accident.longitude || 0,
+            address: `${accident.latitude}, ${accident.longitude}`
+          },
+          createdAt: accident.date ? new Date(accident.date) : new Date(),
+          status: accident.status || 'pending',
+          acceptedResponders: accident.accepted_responders || []
+        }));
+        
+        setAlerts(mappedAlerts);
+        setIsLoading(false);
+        
+      } catch (err) {
+        console.error('Error fetching accidents:', err);
+        setIsLoading(false);
+      }
+    };
+
+    fetchAccidents();
+  }, []);
+
+  console.log('Responder Dashboard - Total alerts:', alerts.length);
+  console.log('Responder Dashboard - All alerts:', alerts);
+  
   const pendingAlerts = alerts.filter(alert => alert.status === 'pending');
-  const selectedAlertData = alerts.find(alert => alert.id === selectedAlert);
+  
+  console.log('Responder Dashboard - Pending alerts count:', pendingAlerts.length);
+  console.log('Responder Dashboard - Pending alerts:', pendingAlerts);
 
   const getTimeAgo = (date: Date) => {
     const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
@@ -38,12 +109,6 @@ const ResponderDashboard: React.FC = () => {
       <header className="bg-red-600 text-white py-3 sm:py-4 px-4 sm:px-6 shadow-lg">
         <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-0">
           <div className="flex items-center gap-2 flex-wrap">
-            {gpsActive && (
-              <div className="flex items-center gap-1.5 sm:gap-2 bg-green-500 px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
-                <Navigation className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse" />
-                <span>GPS فعال</span>
-              </div>
-            )}
             <button
               onClick={() => setShowLogoutModal(true)}
               className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/90 text-red-600 rounded-lg font-semibold flex items-center gap-1.5 sm:gap-2 hover:bg-white transition-colors shadow-sm text-xs sm:text-sm"
@@ -91,74 +156,45 @@ const ResponderDashboard: React.FC = () => {
                 </h2>
               </div>
 
-              {pendingAlerts.length === 0 ? (
+              {isLoading ? (
+                <div className="text-center py-8 sm:py-12">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-gray-300 border-t-red-600 rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
+                  <p className="text-base sm:text-lg text-gray-600">در حال بارگذاری حوادث...</p>
+                </div>
+              ) : alerts.length === 0 ? (
                 <div className="text-center py-8 sm:py-12 text-gray-500">
                   <Bell className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-300" />
                   <p className="text-base sm:text-lg">اعلان جدیدی وجود ندارد</p>
                 </div>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
-                  {pendingAlerts.map(alert => (
+                  <p className="text-sm text-gray-600 text-right mb-2">
+                    نمایش {alerts.length} حادثه (موقت: همه حوادث نمایش داده می‌شود)
+                  </p>
+                  {alerts.map(alert => (
                     <div
                       key={alert.id}
                       className="border-2 border-red-200 rounded-lg p-3 sm:p-4 hover:shadow-lg transition-shadow bg-red-50"
                     >
-                      <div className="flex flex-col sm:flex-row items-start justify-between mb-3 gap-3 sm:gap-0">
-                        <div className="flex gap-2 w-full sm:w-auto order-2 sm:order-1">
-                          <button
-                            onClick={() => handleReject(alert.id)}
-                            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors transform transition-transform hover:scale-105 flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold"
-                          >
-                            <span>رد</span>
-                            <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleAccept(alert.id)}
-                            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors transform transition-transform hover:scale-105 flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold"
-                          >
-                            <span>قبول مأموریت</span>
-                            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          </button>
+                      <div className="text-right mb-3">
+                        <div className="flex items-center gap-2 justify-end flex-wrap">
+                          <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-red-600 text-white rounded-full text-xs font-semibold">
+                            {alert.incidentType}
+                          </span>
+                          <h3 className="text-base sm:text-lg font-bold text-gray-800">{alert.title}</h3>
                         </div>
-                        <div className="text-right flex-1 w-full sm:w-auto order-1 sm:order-2">
-                          <div className="flex items-center gap-2 justify-end flex-wrap">
-                            <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-red-600 text-white rounded-full text-xs font-semibold">
-                              {alert.incidentType}
-                            </span>
-                            <h3 className="text-base sm:text-lg font-bold text-gray-800">{alert.title}</h3>
-                          </div>
-                          <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500 mt-1 justify-end">
-                            <span>{getTimeAgo(alert.createdAt)}</span>
-                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          </div>
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500 mt-1 justify-end">
+                          <span>{getTimeAgo(alert.createdAt)}</span>
+                          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </div>
                       </div>
 
                       <p className="text-sm sm:text-base text-gray-700 mb-3 text-right" dir="rtl">{alert.description}</p>
 
-                      <div className="flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600 mb-3 justify-end">
+                      <div className="flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600 justify-end">
                         <span className="text-right">{alert.location.address}</span>
                         <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 mt-0.5 flex-shrink-0" />
                       </div>
-
-                      <button
-                        onClick={() => setSelectedAlert(selectedAlert === alert.id ? null : alert.id)}
-                        className="text-red-600 hover:text-red-700 font-semibold text-xs sm:text-sm flex items-center gap-1 mr-auto"
-                      >
-                        {selectedAlert === alert.id ? 'بستن نقشه' : 'نمایش روی نقشه'}
-                        <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      </button>
-
-                      {selectedAlert === alert.id && (
-                        <div className="mt-3 sm:mt-4 h-48 sm:h-64 border-2 border-gray-300 rounded-lg overflow-hidden">
-                          <Map
-                            responders={[]}
-                            alerts={[alert]}
-                            center={[alert.location.lat, alert.location.lng]}
-                            zoom={15}
-                          />
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
