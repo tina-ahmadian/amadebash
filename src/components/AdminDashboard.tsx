@@ -148,15 +148,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       r.status === 'active' || r.status === 'on_duty'
     ).length;
 
-    // Count active bases (bases with active responders > 0)
-    const activeBases = bases.filter(base => 
-      base.activeResponders > 0
-    ).length;
+    // Count total bases
+    const totalBases = bases.length;
 
     return {
       todayIncidents,
       activeResponders,
-      activeBases
+      totalBases
     };
   }, [alerts, responders, bases]);
 
@@ -202,8 +200,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <div className="flex items-center justify-between flex-row-reverse">
                       <div className="flex flex-col items-end text-right">
                         <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1 group-hover:text-white">تعداد پایگاه های امدادی استان</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-gray-800 group-hover:text-white">{statistics.activeBases.toLocaleString('fa-IR')}</p>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1 group-hover:text-white">پایگاه در حال فعالیت</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-gray-800 group-hover:text-white">{statistics.totalBases.toLocaleString('fa-IR')}</p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1 group-hover:text-white">پایگاه ثبت شده</p>
                       </div>
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center cursor-pointer transition-transform duration-150 hover:scale-125 group-hover:bg-white/30 flex-shrink-0">
                         <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 transition-transform duration-150 hover:scale-110 group-hover:text-white" />

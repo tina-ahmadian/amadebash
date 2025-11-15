@@ -14,15 +14,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, loginType = 'admin' }) =
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Demo credentials based on login type
-  const DEMO_CREDENTIALS = {
-    admin: { username: 'tina', password: 'tina1234' },
-    responder: { username: '+989912626132', password: '12345678' }
-  };
-
-  const DEMO_USERNAME = DEMO_CREDENTIALS[loginType].username;
-  const DEMO_PASSWORD = DEMO_CREDENTIALS[loginType].password;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -230,26 +221,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, loginType = 'admin' }) =
                     )}
                   </button>
                 </div>
-              </div>
-
-              {/* Demo Credentials Hint */}
-              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-2.5 sm:p-3 text-xs">
-                <p className="text-white font-semibold mb-1 sm:mb-1.5 text-right text-xs">:اطلاعات ورود </p>
-                <div className="text-white/90 text-right flex items-center justify-between mb-0.5 sm:mb-1">
-                  <span className="text-xs">{DEMO_USERNAME}</span>
-                  <span className="font-medium text-xs">{loginType === 'admin' ? ' :نام کاربری' : ' :شماره تلفن'}</span>
-                </div>
-                <div className="text-white/90 text-right flex items-center justify-between">
-                  <span className="text-xs">{DEMO_PASSWORD}</span>
-                  <span className="font-medium text-xs"> :رمز عبور</span>
-                </div>
-                {loginType === 'responder' && (
-                  <div className="mt-2 pt-2 border-t border-white/20">
-                    <p className="text-white/80 text-xs text-right leading-relaxed">
-                      .توجه کنید که مشخصات شما باید توسط مدیر ثبت شده باشد
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Submit Button */}

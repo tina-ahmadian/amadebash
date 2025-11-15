@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Search, User, Phone, MapPin, Shield, CheckCircle, XCircle, Clock, Plus, X, AlertCircle, ChevronDown, Trash2 } from 'lucide-react';
+import { Search, User, Phone, MapPin, Shield, CheckCircle, XCircle, Clock, Plus, X, AlertCircle, ChevronDown, Trash2, Copy } from 'lucide-react';
 import { Responder, ResponderStatus, Base } from '../data/mockData';
 import { useMapContext } from '../context/MapContext';
 
@@ -48,6 +48,7 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
     responderId: null
   });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showAddSuccessModal, setShowAddSuccessModal] = useState(false);
 
   // Fetch bases from API
   const fetchBases = async () => {
@@ -356,8 +357,13 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
       resetForm();
       setIsFormOpen(false);
       
-      // Show success message
-      alert('امدادگر با موفقیت ثبت شد!');
+      // Show success modal
+      setShowAddSuccessModal(true);
+      
+      // Auto close success modal after 3 seconds
+      setTimeout(() => {
+        setShowAddSuccessModal(false);
+      }, 3000);
       
     } catch (err) {
       console.error('Error adding responder:', err);
@@ -551,14 +557,17 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-md font-medium text-gray-700 mb-2">:جنسیت</label>
-                  <select
-                    value={newResponder.gender}
-                    onChange={(e) => handleFieldChange('gender', e.target.value as 'male' | 'female')}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-right border-gray-300"
-                  >
-                    <option value="male">مرد</option>
-                    <option value="female">زن</option>
-                  </select>
+                  <div className="relative">
+                    <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                    <select
+                      value={newResponder.gender}
+                      onChange={(e) => handleFieldChange('gender', e.target.value as 'male' | 'female')}
+                      className="w-full pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-right border-gray-300"
+                    >
+                      <option value="male">مرد</option>
+                      <option value="female">زن</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>
@@ -585,13 +594,37 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
                       formErrors.phone ? 'border-red-500' : 'border-gray-300'
                     }`}
                     dir="ltr"
-                    placeholder="+989123456789 یا 09123456789"
+                    placeholder="09133074616"
                   />
                   {formErrors.phone && <p className="text-xs text-red-500 mt-1 text-right">{formErrors.phone}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-md font-medium text-gray-700 mb-2">:کد سازمانی</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const demoCode = '2EAAf9re';
+                        navigator.clipboard.writeText(demoCode);
+                        // Show a brief success indicator
+                        const btn = document.getElementById('copy-code-btn');
+                        if (btn) {
+                          const originalText = btn.innerHTML;
+                          btn.innerHTML = '<span class="text-green-600">✓ کپی شد</span>';
+                          setTimeout(() => {
+                            btn.innerHTML = originalText;
+                          }, 1500);
+                        }
+                      }}
+                      id="copy-code-btn"
+                      className="group flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 hover:border-gray-300"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span className="font-mono">2EAAf9re</span>
+                      <span className="text-[10px]">(نمونه)</span>
+                    </button>
+                    <label className="text-md font-medium text-gray-700">:کد سازمانی</label>
+                  </div>
                   <input
                     type="text"
                     value={newResponder.organizationalCode}
@@ -951,6 +984,32 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
               <button
                 onClick={() => setShowSuccessModal(false)}
                 className="mt-6 px-6 py-2.5 bg-green-600 rounded-lg text-white font-medium hover:bg-green-700 transition-colors"
+              >
+                متوجه شدم
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Responder Success Modal */}
+      {showAddSuccessModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-2xl max-w-sm w-full p-8 transform transition-all animate-scale-in border-2 border-green-200">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-100 mb-4 animate-bounce">
+                <CheckCircle className="h-12 w-12 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-green-900 mb-3">!عملیات موفق</h3>
+              <p className="text-lg text-green-800 font-semibold mb-2">
+                !امدادگر با موفقیت ثبت شد
+              </p>
+              <p className="text-sm text-green-700">
+                .اطلاعات امدادگر در سیستم ذخیره شده است
+              </p>
+              <button
+                onClick={() => setShowAddSuccessModal(false)}
+                className="mt-6 px-8 py-3 bg-green-600 rounded-xl text-white font-bold hover:bg-green-700 transition-all transform hover:scale-105 shadow-lg"
               >
                 متوجه شدم
               </button>

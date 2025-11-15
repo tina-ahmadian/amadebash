@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building2, MapPin, Users, CheckCircle, XCircle, Plus, X, Search, AlertCircle, Trash2 } from 'lucide-react';
+import { Building2, MapPin, Users, CheckCircle, XCircle, Plus, X, Search, AlertCircle, Trash2, Copy } from 'lucide-react';
 import { Base } from '../data/mockData';
 import LocationPickerMap from './LocationPickerMap';
 
@@ -376,7 +376,31 @@ const BasesPage: React.FC<BasesPageProps> = ({ bases }) => {
                 </div>
 
                 <div>
-                  <label className="block text-md font-medium text-gray-700 mb-2">کد پایگاه</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const demoCode = 'NK5BiNn1gxheo0POYja5';
+                        navigator.clipboard.writeText(demoCode);
+                        // Show a brief success indicator
+                        const btn = document.getElementById('copy-base-code-btn');
+                        if (btn) {
+                          const originalText = btn.innerHTML;
+                          btn.innerHTML = '<span class="text-green-600">✓ کپی شد</span>';
+                          setTimeout(() => {
+                            btn.innerHTML = originalText;
+                          }, 1500);
+                        }
+                      }}
+                      id="copy-base-code-btn"
+                      className="group flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 hover:border-gray-300"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span className="font-mono">NK5BiNn1gxheo0POYja5</span>
+                      <span className="text-[10px]">(نمونه)</span>
+                    </button>
+                    <label className="text-md font-medium text-gray-700">کد پایگاه</label>
+                  </div>
                   <input
                     type="text"
                     value={newBase.code}
@@ -614,7 +638,7 @@ const BasesPage: React.FC<BasesPageProps> = ({ bases }) => {
                       <Building2 className="w-6 h-6 text-red-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-800">{base.code}</h3>
+                      <h3 className="text-sm font-bold text-gray-800">{base.code}</h3>
                       <p className="text-xs text-gray-500">کد پایگاه</p>
                     </div>
                   </div>
