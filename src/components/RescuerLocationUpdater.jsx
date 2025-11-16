@@ -1,13 +1,7 @@
-/**
- * RescuerLocationUpdater - Rescuer device component for sending location updates
- * Uses browser geolocation API to continuously track and send position
- */
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Activity, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import locationStreamService from '../services/LocationStreamService';
+import LiveLocationService from '../services/LiveLocationService';
 
-// Status types
 const STATUS = {
   IDLE: 'idle',
   UPDATING: 'updating',
@@ -15,171 +9,110 @@ const STATUS = {
   ERROR: 'error',
 };
 
-const RescuerLocationUpdater = ({ apiBaseUrl = '/api', authToken = null }) => {
+const RescuerLocationUpdater = () => {
   const [status, setStatus] = useState(STATUS.IDLE);
-  const [message, setMessage] = useState('در انتظار شروع ردیابی موقعیت');
+  const [message, setMessage] = useState('در انتظار شروع ردیابی');
   const [isTracking, setIsTracking] = useState(false);
-  const [currentPosition, setCurrentPosition] = useState(null);
-  const [lastUpdateTime, setLastUpdateTime] = useState(null);
+  const [position, setPosition] = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(null);
   const [errorCount, setErrorCount] = useState(0);
   const watchIdRef = useRef(null);
 
-  // Format coordinates for display
-  const formatCoordinate = (coord) => {
-    return coord ? coord.toFixed(6) : 'نامشخص';
-  };
-
-  // Format time for display
-  const formatTime = (timestamp) => {
-    if (!timestamp) return 'نامشخص';
+  const sendLocation = async (latitude, longitude) => {
     try {
-      return new Date(timestamp).toLocaleTimeString('fa-IR');
-    } catch (error) {
-      return 'نامشخص';
-    }
-  };
-
-  // Send location to backend
-  const sendLocationUpdate = async (latitude, longitude) => {
-    try {
+      console.log('[RescuerLocationUpdater] Sending location:', { latitude, longitude });
       setStatus(STATUS.UPDATING);
       setMessage('در حال ارسال موقعیت...');
 
-      // Initialize service
-      locationStreamService.initialize(apiBaseUrl, authToken);
-
-      // Send update
-      await locationStreamService.updateLocation(latitude, longitude);
+      await LiveLocationService.updateLocation(latitude, longitude);
 
       setStatus(STATUS.SUCCESS);
       setMessage('موقعیت با موفقیت ارسال شد');
-      setLastUpdateTime(new Date().toISOString());
+      setLastUpdate(new Date().toISOString());
       setErrorCount(0);
 
-      // Reset to idle after 2 seconds
       setTimeout(() => {
         if (isTracking) {
           setStatus(STATUS.IDLE);
-          setMessage('در حال ردیابی موقعیت...');
+          setMessage('در حال ردیابی...');
         }
       }, 2000);
-
     } catch (error) {
-      console.error('Error sending location:', error);
       setStatus(STATUS.ERROR);
-      setMessage(`خطا در ارسال موقعیت: ${error.message}`);
+      setMessage(`خطا: ${error.message}`);
       setErrorCount(prev => prev + 1);
 
-      // Reset to idle after 3 seconds
       setTimeout(() => {
         if (isTracking) {
           setStatus(STATUS.IDLE);
-          setMessage('در حال ردیابی موقعیت...');
+          setMessage('در حال ردیابی...');
         }
       }, 3000);
     }
   };
 
-  // Handle successful position
-  const handlePositionSuccess = (position) => {
-    const { latitude, longitude } = position.coords;
+  const handleSuccess = (pos) => {
+    const { latitude, longitude, accuracy } = pos.coords;
     
-    console.log('Position obtained:', { latitude, longitude });
-    
-    setCurrentPosition({
+    setPosition({
       latitude,
       longitude,
-      accuracy: position.coords.accuracy,
-      timestamp: position.timestamp,
+      accuracy,
+      timestamp: pos.timestamp,
     });
 
-    // Send to backend
-    sendLocationUpdate(latitude, longitude);
+    sendLocation(latitude, longitude);
   };
 
-  // Handle position error
-  const handlePositionError = (error) => {
-    console.error('Geolocation error:', error);
-    
-    let errorMessage = 'خطا در دریافت موقعیت';
-    
-    switch (error.code) {
-      case error.PERMISSION_DENIED:
-        errorMessage = 'دسترسی به موقعیت مکانی رد شد. لطفاً دسترسی را فعال کنید.';
-        break;
-      case error.POSITION_UNAVAILABLE:
-        errorMessage = 'موقعیت مکانی در دسترس نیست.';
-        break;
-      case error.TIMEOUT:
-        errorMessage = 'زمان دریافت موقعیت به پایان رسید.';
-        break;
-      default:
-        errorMessage = error.message || 'خطای نامشخص در دریافت موقعیت';
-    }
+  const handleError = (error) => {
+    const messages = {
+      [error.PERMISSION_DENIED]: 'دسترسی به موقعیت مکانی رد شد',
+      [error.POSITION_UNAVAILABLE]: 'موقعیت مکانی در دسترس نیست',
+      [error.TIMEOUT]: 'زمان دریافت موقعیت به پایان رسید',
+    };
     
     setStatus(STATUS.ERROR);
-    setMessage(errorMessage);
+    setMessage(messages[error.code] || 'خطای نامشخص');
     setErrorCount(prev => prev + 1);
   };
 
-  // Start tracking
   const startTracking = () => {
     if (!navigator.geolocation) {
+      console.error('[RescuerLocationUpdater] Geolocation not supported');
       setStatus(STATUS.ERROR);
-      setMessage('مرورگر شما از ردیابی موقعیت مکانی پشتیبانی نمی‌کند');
+      setMessage('مرورگر از ردیابی موقعیت پشتیبانی نمی‌کند');
       return;
     }
 
+    console.log('[RescuerLocationUpdater] Starting GPS tracking...');
     setIsTracking(true);
     setStatus(STATUS.IDLE);
     setMessage('در حال دریافت موقعیت...');
     setErrorCount(0);
 
-    // Options for geolocation
-    const options = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0,
-    };
-
-    // Start watching position
     watchIdRef.current = navigator.geolocation.watchPosition(
-      handlePositionSuccess,
-      handlePositionError,
-      options
+      handleSuccess,
+      handleError,
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
     );
-
-    console.log('Location tracking started');
+    console.log('[RescuerLocationUpdater] GPS watch started with ID:', watchIdRef.current);
   };
 
-  // Stop tracking
   const stopTracking = () => {
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
-      console.log('Location tracking stopped');
     }
-
     setIsTracking(false);
     setStatus(STATUS.IDLE);
-    setMessage('ردیابی موقعیت متوقف شد');
+    setMessage('ردیابی متوقف شد');
   };
 
-  // Auto-start tracking on mount
   useEffect(() => {
-    // Check for permissions
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-        if (result.state === 'granted') {
-          console.log('Geolocation permission granted');
-        } else if (result.state === 'prompt') {
-          console.log('Geolocation permission prompt');
-        } else {
-          console.warn('Geolocation permission denied');
-        }
-      });
-    }
-
     return () => {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
@@ -187,50 +120,48 @@ const RescuerLocationUpdater = ({ apiBaseUrl = '/api', authToken = null }) => {
     };
   }, []);
 
-  // Get status icon
-  const getStatusIcon = () => {
+  const getIcon = () => {
     switch (status) {
-      case STATUS.UPDATING:
-        return <Activity className="w-6 h-6 text-blue-600 animate-pulse" />;
-      case STATUS.SUCCESS:
-        return <CheckCircle className="w-6 h-6 text-green-600" />;
-      case STATUS.ERROR:
-        return <XCircle className="w-6 h-6 text-red-600" />;
-      default:
-        return <MapPin className="w-6 h-6 text-gray-600" />;
+      case STATUS.UPDATING: return <Activity className="w-6 h-6 text-blue-600 animate-pulse" />;
+      case STATUS.SUCCESS: return <CheckCircle className="w-6 h-6 text-green-600" />;
+      case STATUS.ERROR: return <XCircle className="w-6 h-6 text-red-600" />;
+      default: return <MapPin className="w-6 h-6 text-gray-600" />;
     }
   };
 
-  // Get status color
   const getStatusColor = () => {
     switch (status) {
-      case STATUS.UPDATING:
-        return 'bg-blue-100 border-blue-500';
-      case STATUS.SUCCESS:
-        return 'bg-green-100 border-green-500';
-      case STATUS.ERROR:
-        return 'bg-red-100 border-red-500';
-      default:
-        return 'bg-gray-100 border-gray-500';
+      case STATUS.UPDATING: return 'bg-blue-100 border-blue-500';
+      case STATUS.SUCCESS: return 'bg-green-100 border-green-500';
+      case STATUS.ERROR: return 'bg-red-100 border-red-500';
+      default: return 'bg-gray-100 border-gray-500';
+    }
+  };
+
+  const formatCoord = (coord) => coord ? coord.toFixed(6) : 'نامشخص';
+  const formatTime = (ts) => {
+    if (!ts) return 'نامشخص';
+    try {
+      return new Date(ts).toLocaleTimeString('fa-IR');
+    } catch {
+      return 'نامشخص';
     }
   };
 
   return (
     <div className="max-w-2xl mx-auto p-6" dir="rtl">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        {/* Header */}
         <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6">
           <div className="flex items-center gap-3 mb-2">
             <MapPin className="w-8 h-8" />
             <h2 className="text-2xl font-bold">ردیابی موقعیت امدادگر</h2>
           </div>
-          <p className="text-red-100">موقعیت شما به صورت خودکار به مرکز ارسال می‌شود</p>
+          <p className="text-red-100">موقعیت شما به صورت خودکار ارسال می‌شود</p>
         </div>
 
-        {/* Status Card */}
         <div className={`p-6 border-b-4 ${getStatusColor()}`}>
           <div className="flex items-center gap-3 mb-3">
-            {getStatusIcon()}
+            {getIcon()}
             <div>
               <div className="text-sm font-semibold text-gray-600">وضعیت:</div>
               <div className="text-lg font-bold">
@@ -244,7 +175,6 @@ const RescuerLocationUpdater = ({ apiBaseUrl = '/api', authToken = null }) => {
           <p className="text-sm text-gray-700">{message}</p>
         </div>
 
-        {/* Controls */}
         <div className="p-6 bg-gray-50">
           <div className="flex gap-3">
             {!isTracking ? (
@@ -267,58 +197,55 @@ const RescuerLocationUpdater = ({ apiBaseUrl = '/api', authToken = null }) => {
           </div>
         </div>
 
-        {/* Position Info */}
-        {currentPosition && (
+        {position && (
           <div className="p-6 border-t">
-            <h3 className="font-bold text-lg mb-4 text-gray-800">اطلاعات موقعیت فعلی</h3>
+            <h3 className="font-bold text-lg mb-4 text-gray-800">موقعیت فعلی</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-blue-50 p-4 rounded-lg">
                 <div className="text-xs text-gray-600 mb-1">عرض جغرافیایی</div>
                 <div className="font-mono text-lg font-bold text-blue-600">
-                  {formatCoordinate(currentPosition.latitude)}
+                  {formatCoord(position.latitude)}
                 </div>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg">
                 <div className="text-xs text-gray-600 mb-1">طول جغرافیایی</div>
                 <div className="font-mono text-lg font-bold text-blue-600">
-                  {formatCoordinate(currentPosition.longitude)}
+                  {formatCoord(position.longitude)}
                 </div>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="text-xs text-gray-600 mb-1">دقت (متر)</div>
                 <div className="font-mono text-lg font-bold text-gray-600">
-                  {currentPosition.accuracy?.toFixed(0) || 'نامشخص'}
+                  {position.accuracy?.toFixed(0) || 'نامشخص'}
                 </div>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="text-xs text-gray-600 mb-1">آخرین بروزرسانی</div>
                 <div className="text-sm font-bold text-gray-600">
-                  {formatTime(lastUpdateTime)}
+                  {formatTime(lastUpdate)}
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Error warning */}
         {errorCount > 3 && (
           <div className="p-4 bg-yellow-50 border-r-4 border-yellow-500 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
             <div>
               <div className="font-bold text-yellow-800">تعداد خطاها زیاد است</div>
               <div className="text-sm text-yellow-700">
-                لطفاً اتصال اینترنت و تنظیمات موقعیت مکانی خود را بررسی کنید
+                لطفاً اتصال اینترنت و GPS خود را بررسی کنید
               </div>
             </div>
           </div>
         )}
 
-        {/* Info */}
         <div className="p-6 bg-gray-50 border-t">
           <div className="text-xs text-gray-600 space-y-2">
-            <p>• برای عملکرد بهتر، GPS دستگاه خود را فعال کنید</p>
-            <p>• مطمئن شوید اتصال اینترنت پایدار دارید</p>
-            <p>• موقعیت شما تنها برای مرکز هلال احمر قابل مشاهده است</p>
+            <p>• GPS دستگاه را فعال کنید</p>
+            <p>• اتصال اینترنت پایدار داشته باشید</p>
+            <p>• موقعیت شما محرمانه است</p>
           </div>
         </div>
       </div>

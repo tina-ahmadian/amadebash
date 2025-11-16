@@ -6,6 +6,7 @@ import IncidentsPage from './IncidentsPage';
 import BasesPage from './BasesPage';
 import SettingsPage from './SettingsPage';
 import RespondersInfoPage from './RespondersInfoPage';
+import RescuerLiveMap from './RescuerLiveMap';
 import { useMapContext } from '../context/MapContext';
 import { mockBases, Base } from '../data/mockData';
 
@@ -211,18 +212,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 </div>
               </div>
 
-              {/* Map Section */}
+              {/* Live Map Section */}
               <div className="flex-1 overflow-hidden p-3 sm:p-4">
                 <div className="h-full bg-white rounded-lg shadow-lg overflow-hidden">
-                  <Map
-                    responders={responders}
-                    alerts={alerts}
-                    bases={bases}
-                    autoFitOnRender
-                    autoFitMinZoom={14}
-                    autoClusterFocus
-                    clusterFocusZoom={15}
-                  />
+                  <RescuerLiveMap />
                 </div>
               </div>
             </div>
