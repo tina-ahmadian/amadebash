@@ -20,6 +20,364 @@ const targetGenderOptions: Array<{ value: Gender | 'all'; label: string }> = [
   { value: 'female', label: 'زن' },
 ];
 
+// Demo alerts - فقط برای نمایش روی نقشه (در لیست حوادث نمایش داده نمیشن)
+const demoAlertsForMap: Alert[] = [
+  // حوادث در شمال اصفهان
+  {
+    id: 'demo-1',
+    title: 'سیل روستای قهدریجان',
+    description: 'سیلاب ناگهانی در روستای قهدریجان',
+    incidentType: 'سیل',
+    targetGender: 'all',
+    location: {
+      lat: 32.5720,
+      lng: 51.4890,
+      address: 'قهدریجان، شمال غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3),
+    status: 'pending'
+  },
+  {
+    id: 'demo-2',
+    title: 'برف و کولاک فریدن',
+    description: 'بارش شدید برف در منطقه فریدن',
+    incidentType: 'برف و کولاک',
+    targetGender: 'all',
+    location: {
+      lat: 32.9145,
+      lng: 50.1120,
+      address: 'فریدن، شمال اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
+    status: 'pending'
+  },
+  {
+    id: 'demo-3',
+    title: 'زلزله خفیف سمیرم',
+    description: 'زلزله خفیف در منطقه سمیرم',
+    incidentType: 'زلزله',
+    targetGender: 'all',
+    location: {
+      lat: 31.4167,
+      lng: 51.5667,
+      address: 'سمیرم، جنوب غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5),
+    status: 'pending'
+  },
+  {
+    id: 'demo-4',
+    title: 'سیل شهرضا',
+    description: 'سیل در منطقه شهرضا',
+    incidentType: 'سیل',
+    targetGender: 'all',
+    location: {
+      lat: 31.9960,
+      lng: 51.8594,
+      address: 'شهرضا، جنوب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 45),
+    status: 'pending'
+  },
+  {
+    id: 'demo-5',
+    title: 'مانور امدادی نجف‌آباد',
+    description: 'مانور آموزشی در نجف‌آباد',
+    incidentType: 'مانور',
+    targetGender: 'all',
+    location: {
+      lat: 32.6342,
+      lng: 51.3661,
+      address: 'نجف‌آباد، غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 30),
+    status: 'pending'
+  },
+  // حوادث در شرق اصفهان
+  {
+    id: 'demo-6',
+    title: 'برف و کولاک نائین',
+    description: 'بارش شدید برف در شهرستان نائین',
+    incidentType: 'برف و کولاک',
+    targetGender: 'all',
+    location: {
+      lat: 32.8583,
+      lng: 53.0833,
+      address: 'نائین، شرق اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 90),
+    status: 'pending'
+  },
+  {
+    id: 'demo-7',
+    title: 'سیل خوراسگان',
+    description: 'سیلاب در منطقه خوراسگان',
+    incidentType: 'سیل',
+    targetGender: 'all',
+    location: {
+      lat: 32.6890,
+      lng: 51.5320,
+      address: 'خوراسگان، شمال شرق اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 120),
+    status: 'pending'
+  },
+  {
+    id: 'demo-8',
+    title: 'زلزله کاشان',
+    description: 'زلزله خفیف در منطقه کاشان',
+    incidentType: 'زلزله',
+    targetGender: 'all',
+    location: {
+      lat: 33.9831,
+      lng: 51.4364,
+      address: 'کاشان، شمال اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 150),
+    status: 'pending'
+  },
+  // حوادث در جنوب اصفهان
+  {
+    id: 'demo-9',
+    title: 'سیل دولت‌آباد',
+    description: 'سیلاب در منطقه دولت‌آباد',
+    incidentType: 'سیل',
+    targetGender: 'all',
+    location: {
+      lat: 32.7971,
+      lng: 51.6804,
+      address: 'دولت‌آباد، شمال اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60),
+    status: 'pending'
+  },
+  {
+    id: 'demo-10',
+    title: 'برف و کولاک فلاورجان',
+    description: 'بارش شدید برف در فلاورجان',
+    incidentType: 'برف و کولاک',
+    targetGender: 'all',
+    location: {
+      lat: 32.5492,
+      lng: 51.5131,
+      address: 'فلاورجان، غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 40),
+    status: 'pending'
+  },
+  // حوادث در روستاهای اطراف
+  {
+    id: 'demo-11',
+    title: 'زلزله روستای ورزنه',
+    description: 'زلزله خفیف در روستای ورزنه',
+    incidentType: 'زلزله',
+    targetGender: 'all',
+    location: {
+      lat: 32.4589,
+      lng: 52.6483,
+      address: 'ورزنه، شرق اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 180),
+    status: 'pending'
+  },
+  {
+    id: 'demo-12',
+    title: 'سیل روستای چمگردان',
+    description: 'سیلاب در روستای چمگردان',
+    incidentType: 'سیل',
+    targetGender: 'all',
+    location: {
+      lat: 32.4823,
+      lng: 51.5234,
+      address: 'چمگردان، جنوب غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 100),
+    status: 'pending'
+  },
+  {
+    id: 'demo-13',
+    title: 'مانور امدادی شاهین‌شهر',
+    description: 'مانور آموزشی در شاهین‌شهر',
+    incidentType: 'مانور',
+    targetGender: 'all',
+    location: {
+      lat: 32.8583,
+      lng: 51.5511,
+      address: 'شاهین‌شهر، شمال اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 50),
+    status: 'pending'
+  },
+  {
+    id: 'demo-14',
+    title: 'برف و کولاک اردستان',
+    description: 'بارش شدید برف در اردستان',
+    incidentType: 'برف و کولاک',
+    targetGender: 'all',
+    location: {
+      lat: 33.3761,
+      lng: 52.3697,
+      address: 'اردستان، شمال شرق اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 200),
+    status: 'pending'
+  },
+  {
+    id: 'demo-15',
+    title: 'سیل مبارکه',
+    description: 'سیلاب در شهرستان مبارکه',
+    incidentType: 'سیل',
+    targetGender: 'all',
+    location: {
+      lat: 32.3518,
+      lng: 51.5054,
+      address: 'مبارکه، جنوب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 80),
+    status: 'pending'
+  },
+  {
+    id: 'demo-16',
+    title: 'حمله ی نظامی روستای گز',
+    description: 'حمله نظامی در روستای گز',
+    incidentType: 'حمله ی نظامی',
+    targetGender: 'all',
+    location: {
+      lat: 32.7234,
+      lng: 51.4523,
+      address: 'روستای گز، شمال غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 25),
+    status: 'pending'
+  },
+  {
+    id: 'demo-17',
+    title: 'زلزله فریدون‌شهر',
+    description: 'زلزله خفیف در فریدون‌شهر',
+    incidentType: 'زلزله',
+    targetGender: 'all',
+    location: {
+      lat: 32.9407,
+      lng: 50.1117,
+      address: 'فریدون‌شهر، غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 220),
+    status: 'pending'
+  },
+  {
+    id: 'demo-18',
+    title: 'سیل دهاقان',
+    description: 'سیلاب در شهرستان دهاقان',
+    incidentType: 'سیل',
+    targetGender: 'all',
+    location: {
+      lat: 31.9390,
+      lng: 51.6464,
+      address: 'دهاقان، جنوب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 110),
+    status: 'pending'
+  },
+  {
+    id: 'demo-19',
+    title: 'برف و کولاک آران و بیدگل',
+    description: 'بارش شدید برف در آران و بیدگل',
+    incidentType: 'برف و کولاک',
+    targetGender: 'all',
+    location: {
+      lat: 34.0583,
+      lng: 50.9842,
+      address: 'آران و بیدگل، شمال اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 160),
+    status: 'pending'
+  },
+  {
+    id: 'demo-20',
+    title: 'مانور امدادی گلپایگان',
+    description: 'مانور آموزشی در گلپایگان',
+    incidentType: 'مانور',
+    targetGender: 'all',
+    location: {
+      lat: 33.4472,
+      lng: 50.2886,
+      address: 'گلپایگان، شمال غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 70),
+    status: 'pending'
+  },
+  {
+    id: 'demo-21',
+    title: 'سیل خمینی‌شهر',
+    description: 'سیلاب شدید در خمینی‌شهر',
+    incidentType: 'سیل',
+    targetGender: 'all',
+    location: {
+      lat: 32.6851,
+      lng: 51.5301,
+      address: 'خمینی‌شهر، شمال غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 35),
+    status: 'pending'
+  },
+  {
+    id: 'demo-22',
+    title: 'زلزله لنجان',
+    description: 'زلزله خفیف در شهرستان لنجان',
+    incidentType: 'زلزله',
+    targetGender: 'all',
+    location: {
+      lat: 32.4759,
+      lng: 51.5093,
+      address: 'لنجان، جنوب غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 130),
+    status: 'pending'
+  },
+  {
+    id: 'demo-23',
+    title: 'برف و کولاک بوئین و میاندشت',
+    description: 'بارش شدید برف در بوئین و میاندشت',
+    incidentType: 'برف و کولاک',
+    targetGender: 'all',
+    location: {
+      lat: 33.3500,
+      lng: 51.0833,
+      address: 'بوئین و میاندشت، شمال غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 95),
+    status: 'pending'
+  },
+  {
+    id: 'demo-24',
+    title: 'حمله ی نظامی روستای ونک',
+    description: 'حمله نظامی در روستای ونک',
+    incidentType: 'حمله ی نظامی',
+    targetGender: 'all',
+    location: {
+      lat: 32.5500,
+      lng: 51.7500,
+      address: 'روستای ونک، شرق اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 15),
+    status: 'pending'
+  },
+  {
+    id: 'demo-25',
+    title: 'سیل تیران و کرون',
+    description: 'سیلاب در شهرستان تیران و کرون',
+    incidentType: 'سیل',
+    targetGender: 'all',
+    location: {
+      lat: 32.7061,
+      lng: 51.1556,
+      address: 'تیران و کرون، غرب اصفهان'
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 55),
+    status: 'pending'
+  }
+];
+
 interface AlertFormProps {
   onClose: () => void;
 }
@@ -530,7 +888,7 @@ const AlertForm: React.FC<AlertFormProps> = ({ onClose }) => {
               <div className="h-[300px] sm:h-[400px] md:h-[500px] lg:h-[620px] xl:h-[820px] border-2 border-gray-600 rounded-lg overflow-hidden">
                 <Map
                   responders={[]}
-                  alerts={alerts}
+                  alerts={demoAlertsForMap}
                   bases={bases}
                   selectedLocation={selectedLocation}
                   onLocationSelect={handleLocationSelect}

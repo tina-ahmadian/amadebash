@@ -83,7 +83,7 @@ const createPersonIcon = () => {
   });
 };
 
-// Create incident icons based on type
+// Create incident icons based on type - Pin shape like map markers
 const createIncidentIcon = (incidentType: string) => {
   let iconContent = '';
   
@@ -91,18 +91,18 @@ const createIncidentIcon = (incidentType: string) => {
     case 'سیل':
       // Flood icon - water waves
       iconContent = `
-        <path d="M15 26C15 26 18 22 21 26C24 30 27 26 30 26C33 26 36 30 39 26C42 22 45 26 45 26" 
+        <path d="M15 30C15 30 18 26 21 30C24 34 27 30 30 30C33 30 36 34 39 30C42 26 45 30 45 30" 
               stroke="#FFFFFF" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M15 32C15 32 18 28 21 32C24 36 27 32 30 32C33 32 36 36 39 32C42 28 45 32 45 32" 
+        <path d="M15 36C15 36 18 32 21 36C24 40 27 36 30 36C33 36 36 40 39 36C42 32 45 36 45 36" 
               stroke="#FFFFFF" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M18 20C18 20 20 18 22 20C24 22 26 20 28 20C30 20 32 22 34 20C36 18 38 20 38 20" 
+        <path d="M18 24C18 24 20 22 22 24C24 26 26 24 28 24C30 24 32 26 34 24C36 22 38 24 38 24" 
               stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round"/>`;
       break;
     
     case 'برف و کولاک':
       // Snow icon - snowflake
       iconContent = `
-        <g transform="translate(30, 28)">
+        <g transform="translate(30, 30)">
           <line x1="0" y1="-10" x2="0" y2="10" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
           <line x1="-10" y1="0" x2="10" y2="0" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
           <line x1="-7" y1="-7" x2="7" y2="7" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
@@ -114,16 +114,16 @@ const createIncidentIcon = (incidentType: string) => {
     case 'زلزله':
       // Earthquake icon - seismic waves
       iconContent = `
-        <path d="M15 28 L20 28 L23 20 L27 36 L31 24 L34 28 L45 28" 
+        <path d="M15 30 L20 30 L23 22 L27 38 L31 26 L34 30 L45 30" 
               stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M15 35 L20 35 L22 30 L26 40 L30 32 L33 35 L45 35" 
+        <path d="M15 37 L20 37 L22 32 L26 42 L30 34 L33 37 L45 37" 
               stroke="#FFFFFF" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>`;
       break;
     
     case 'حمله ی نظامی':
       // Military attack icon - bomb
       iconContent = `
-        <g transform="translate(30, 28)">
+        <g transform="translate(30, 30)">
           <!-- Bomb fuse -->
           <line x1="-4" y1="-10" x2="-6" y2="-15" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
           <circle cx="-6" cy="-16" r="2" fill="#FFA500"/>
@@ -141,7 +141,7 @@ const createIncidentIcon = (incidentType: string) => {
     case 'مانور':
       // Drill/Exercise icon - target
       iconContent = `
-        <g transform="translate(30, 28)">
+        <g transform="translate(30, 30)">
           <circle cx="0" cy="0" r="12" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
           <circle cx="0" cy="0" r="8" fill="none" stroke="#FFFFFF" stroke-width="2"/>
           <circle cx="0" cy="0" r="4" fill="#FFFFFF"/>
@@ -155,30 +155,39 @@ const createIncidentIcon = (incidentType: string) => {
     default:
       // Default icon - alert triangle
       iconContent = `
-        <path d="M30 16L38 34H22L30 16Z" fill="#DC2626"/>
-        <rect x="28.6" y="24" width="2.8" height="8" rx="1.4" fill="#FFFFFF"/>
-        <rect x="28.6" y="33" width="2.8" height="2.8" rx="1.4" fill="#FFFFFF"/>`;
+        <path d="M30 20L38 38H22L30 20Z" fill="#DC2626"/>
+        <rect x="28.6" y="28" width="2.8" height="8" rx="1.4" fill="#FFFFFF"/>
+        <rect x="28.6" y="37" width="2.8" height="2.8" rx="1.4" fill="#FFFFFF"/>`;
   }
 
-  const svg = `<svg width="60" height="72" viewBox="0 0 60 72" xmlns="http://www.w3.org/2000/svg">
+  const svg = `<svg width="60" height="74" viewBox="0 0 60 74" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <filter id="shadow-${incidentType}" x="-25%" y="-25%" width="150%" height="150%">
-        <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.22"/>
+      <filter id="shadow-${incidentType}" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.3"/>
       </filter>
     </defs>
-    <g filter="url(#shadow-${incidentType})" transform="translate(0 4)">
-      <circle cx="30" cy="28" r="24" fill="#DC2626" />
-      ${iconContent}
+    <g filter="url(#shadow-${incidentType})">
+      <!-- Pin shape body -->
+      <path d="M 30 6 C 17 6 6 17 6 30 C 6 43 20 56 30 62 C 40 56 54 43 54 30 C 54 17 43 6 30 6 Z" 
+            fill="#DC2626"/>
+      <path d="M 30 6 C 17 6 6 17 6 30 C 6 43 20 56 30 62 C 40 56 54 43 54 30 C 54 17 43 6 30 6 Z" 
+            fill="none" stroke="#991B1B" stroke-width="2"/>
+      <!-- Inner circle for icon content -->
+      <circle cx="30" cy="30" r="19" fill="#000000"/>
+      <g transform="translate(30, 30) scale(0.65) translate(-30, -30)">
+        ${iconContent}
+      </g>
     </g>
-    <ellipse cx="30" cy="58" rx="12" ry="4" fill="rgba(0,0,0,0.08)"/>
+    <!-- Ground shadow -->
+    <ellipse cx="30" cy="68" rx="10" ry="3.5" fill="rgba(0,0,0,0.15)"/>
   </svg>`;
   
   const encodedSvg = encodeURIComponent(svg);
   return new L.Icon({
     iconUrl: `data:image/svg+xml;charset=utf-8,${encodedSvg}`,
-    iconSize: [60, 72],
-    iconAnchor: [30, 62],
-    popupAnchor: [0, -60]
+    iconSize: [48, 59],
+    iconAnchor: [24, 50],
+    popupAnchor: [0, -50]
   });
 };
 
@@ -434,8 +443,8 @@ const Map: React.FC<MapProps> = ({
         address: base.address
       }));
     }
-    // Fallback to Isfahan bases if no bases from API
-    return isfahanRedCrescentBases;
+    // Return empty array if no bases provided
+    return [];
   }, [bases]);
 
   const displayedAlerts = useMemo(() => {
@@ -445,7 +454,7 @@ const Map: React.FC<MapProps> = ({
       const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
-    return sortedAlerts.slice(0, 3);
+    return sortedAlerts;
   }, [alerts]);
 
   const limitedResponders = useMemo(() => responders.slice(0, 3), [responders]);
@@ -679,11 +688,11 @@ const Map: React.FC<MapProps> = ({
           }}
         >
           <Popup>
-            <div className="text-right font-samim text-black text-sm sm:text-base leading-relaxed" dir="rtl">
-              <h3 className="font-bold text-lg sm:text-xl text-orange-600">{alert.title}</h3>
+            <div className="text-right font-samim text-black text-sm sm:text-base leading-relaxed bg-gray-200 p-3 rounded-lg" dir="rtl">
+              <h3 className="font-bold text-lg sm:text-xl text-black">{alert.title}</h3>
               <p className="mt-2 text-black text-xs sm:text-sm">نوع حادثه: {alert.incidentType}</p>
-              <p className="mt-1 text-black/80 text-xs sm:text-sm">ثبت شده: {formatRelativeTime(alert.createdAt)}</p>
-              <p className="mt-2 text-black/80 text-xs sm:text-sm">{alert.location.address}</p>
+              <p className="mt-1 text-black text-xs sm:text-sm">ثبت شده: {formatRelativeTime(alert.createdAt)}</p>
+              <p className="mt-2 text-black text-xs sm:text-sm">{alert.location.address}</p>
             </div>
           </Popup>
         </Marker>
