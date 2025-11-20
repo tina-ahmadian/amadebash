@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { MapProvider } from './context/MapContext';
 import { mockResponders, mockAlerts } from './data/mockData';
 import AdminDashboard from './components/AdminDashboard';
@@ -21,7 +21,7 @@ function App() {
     
     return 'selection';
   });
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+  const [, setIsAuthenticated] = useState(() => {
     const token = localStorage.getItem('authToken');
     return !!token;
   });

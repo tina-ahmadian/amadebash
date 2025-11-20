@@ -83,6 +83,76 @@ export function useLocationStream({
   }, []);
 
   /**
+   * Parse SSE message format
+   */
+  const parseSSEMessage = useCallback((message: string) => {
+    const lines = message.split('\n');
+    let eventType = 'message';
+    let eventData = '';
+
+    for (const line of lines) {
+      if (line.startsWith('event:')) {
+        eventType = line.substring(6).trim();
+      } else if (line.startsWith('data:')) {
+        eventData = line.substring(5).trim();
+      }
+    }
+
+    // Handle different event types
+    switch (eventType) {
+      case 'location_update':
+        try {
+          const data: RescuerLocation = JSON.parse(eventData);
+          console.log('[useLocationStream] Location update:', data);
+          updateLocation(data);
+        } catch (err) {
+          console.error('[useLocationStream] Failed to parse location data:', err);
+        }
+        break;
+
+      case 'ping':
+        console.log('[useLocationStream] Ping received - connection alive');
+        break;
+
+      default:
+        console.log('[useLocationStream] Unknown event type:', eventType, eventData);
+    }
+  }, [updateLocation]);
+
+  // Use ref to avoid circular dependency
+  const connectRef = useRef<() => void>();
+  
+  /**
+   * Schedule reconnection with exponential backoff
+   */
+  const scheduleReconnect = useCallback(() => {
+    if (isManualDisconnectRef.current) {
+      return;
+    }
+
+    setConnectionAttempts((prev) => {
+      const nextAttempt = prev + 1;
+      
+      if (nextAttempt >= maxReconnectAttempts) {
+        console.error('[useLocationStream] Max reconnection attempts reached');
+        setError(`Failed to connect after ${maxReconnectAttempts} attempts`);
+        return prev;
+      }
+
+      const delay = getReconnectDelay(nextAttempt);
+      console.log(`[useLocationStream] Reconnecting in ${delay}ms (attempt ${nextAttempt}/${maxReconnectAttempts})`);
+
+      reconnectTimeoutRef.current = setTimeout(() => {
+        if (connectRef.current) {
+          connectRef.current();
+        }
+      }, delay);
+
+      return nextAttempt;
+    });
+  }, [maxReconnectAttempts, getReconnectDelay]);
+
+  /**
    * Connect using fetch API with manual SSE parsing
    * This allows us to use Authorization headers
    */
@@ -167,7 +237,7 @@ export function useLocationStream({
         scheduleReconnect();
       }
     }
-  }, [parseSSEMessage]);
+  }, [parseSSEMessage, scheduleReconnect]);
 
   /**
    * Connect to SSE endpoint
@@ -200,70 +270,11 @@ export function useLocationStream({
     connectWithFetch(token);
   }, [enabled, token, connectionAttempts, maxReconnectAttempts, isConnected, connectWithFetch]);
 
-  /**
-   * Parse SSE message format
-   */
-  const parseSSEMessage = useCallback((message: string) => {
-    const lines = message.split('\n');
-    let eventType = 'message';
-    let eventData = '';
+  // Store connect in ref
+  connectRef.current = connect;
 
-    for (const line of lines) {
-      if (line.startsWith('event:')) {
-        eventType = line.substring(6).trim();
-      } else if (line.startsWith('data:')) {
-        eventData = line.substring(5).trim();
-      }
-    }
-
-    // Handle different event types
-    switch (eventType) {
-      case 'location_update':
-        try {
-          const data: RescuerLocation = JSON.parse(eventData);
-          console.log('[useLocationStream] Location update:', data);
-          updateLocation(data);
-        } catch (err) {
-          console.error('[useLocationStream] Failed to parse location data:', err);
-        }
-        break;
-
-      case 'ping':
-        console.log('[useLocationStream] Ping received - connection alive');
-        break;
-
-      default:
-        console.log('[useLocationStream] Unknown event type:', eventType, eventData);
-    }
-  }, [updateLocation]);
-
-  /**
-   * Schedule reconnection with exponential backoff
-   */
-  const scheduleReconnect = useCallback(() => {
-    if (isManualDisconnectRef.current) {
-      return;
-    }
-
-    setConnectionAttempts((prev) => {
-      const nextAttempt = prev + 1;
-      
-      if (nextAttempt >= maxReconnectAttempts) {
-        console.error('[useLocationStream] Max reconnection attempts reached');
-        setError(`Failed to connect after ${maxReconnectAttempts} attempts`);
-        return prev;
-      }
-
-      const delay = getReconnectDelay(nextAttempt);
-      console.log(`[useLocationStream] Reconnecting in ${delay}ms (attempt ${nextAttempt}/${maxReconnectAttempts})`);
-
-      reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
-      }, delay);
-
-      return nextAttempt;
-    });
-  }, [maxReconnectAttempts, getReconnectDelay, connect]);
+  // Store connect in ref
+  connectRef.current = connect;
 
   /**
    * Manual reconnect function (resets attempt counter)

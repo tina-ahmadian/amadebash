@@ -143,28 +143,52 @@ const RescuerLiveMap = () => {
   };
 
   const handleLocationUpdate = useCallback((data) => {
+    console.log('[RescuerLiveMap] Location update received:', data);
     setRescuers((prev) => {
-      const index = prev.findIndex((r) => r.id === data.rescuerId || r.id === data.id);
+      console.log('[RescuerLiveMap] Previous rescuers count:', prev.length);
+      // Try to find rescuer by different possible ID fields
+      const rescuerId = data.rescuerId || data.rescuer_id || data.id;
+      const idStr = rescuerId?.toString();
+      
+      console.log('[RescuerLiveMap] Looking for rescuer with ID:', idStr);
+      console.log('[RescuerLiveMap] Available rescuer IDs:', prev.map(r => r.id?.toString()));
+      
+      const index = prev.findIndex((r) => {
+        const rIdStr = r.id?.toString();
+        const match = rIdStr === idStr || r.id === rescuerId || r.id?.toString() === rescuerId?.toString();
+        if (match) {
+          console.log('[RescuerLiveMap] Found matching rescuer:', r.id, 'with data ID:', idStr);
+        }
+        return match;
+      });
       
       if (index !== -1) {
+        // Update existing rescuer
         const updated = [...prev];
         updated[index] = {
           ...updated[index],
-          latitude: data.latitude,
-          longitude: data.longitude,
+          latitude: data.latitude || data.lat || updated[index].latitude,
+          longitude: data.longitude || data.lng || updated[index].longitude,
           status: data.status || updated[index].status,
-          lastUpdate: data.timestamp || new Date().toISOString(),
+          lastUpdate: data.timestamp || data.last_update || new Date().toISOString(),
         };
+        console.log('[RescuerLiveMap] Updated rescuer:', updated[index]);
+        console.log('[RescuerLiveMap] Total rescuers after update:', updated.length);
         return updated;
       } else {
-        return [...prev, {
-          id: data.rescuerId || data.id,
+        // Add new rescuer if not found
+        const newRescuer = {
+          id: idStr || `${Date.now()}-${Math.random()}`,
           name: data.name || 'امدادگر',
-          latitude: data.latitude,
-          longitude: data.longitude,
+          latitude: data.latitude || data.lat || 0,
+          longitude: data.longitude || data.lng || 0,
           status: data.status || 'active',
-          lastUpdate: data.timestamp || new Date().toISOString(),
-        }];
+          lastUpdate: data.timestamp || data.last_update || new Date().toISOString(),
+        };
+        console.log('[RescuerLiveMap] Added new rescuer:', newRescuer);
+        const newList = [...prev, newRescuer];
+        console.log('[RescuerLiveMap] Total rescuers after adding:', newList.length);
+        return newList;
       }
     });
   }, []);
@@ -172,6 +196,60 @@ const RescuerLiveMap = () => {
   const handleError = useCallback((err) => {
     setError(err.message);
     setTimeout(() => setError(null), 5000);
+  }, []);
+
+  // Fetch responders from API on mount
+  useEffect(() => {
+    const fetchResponders = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.error('[RescuerLiveMap] No auth token for fetching responders');
+          return;
+        }
+
+        const response = await fetch('/api/api/v1/rescuers', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[RescuerLiveMap] Rescuers API Response:', data);
+          
+          // Handle different possible response structures
+          let respondersData = Array.isArray(data) ? data : data.data || data.rescuers || [];
+          
+          // Map API data to rescuers format
+          const mappedRescuers = respondersData.map((rescuer) => ({
+            id: rescuer.id?.toString() || `${Date.now()}-${Math.random()}`,
+            name: rescuer.name || 'امدادگر',
+            latitude: rescuer.latitude || 0,
+            longitude: rescuer.longitude || 0,
+            status: rescuer.status || 'inactive',
+            lastUpdate: rescuer.last_update || new Date().toISOString(),
+          }));
+          
+          console.log('[RescuerLiveMap] Mapped rescuers:', mappedRescuers);
+          console.log('[RescuerLiveMap] Total rescuers count:', mappedRescuers.length);
+          console.log('[RescuerLiveMap] Rescuers with valid locations:', mappedRescuers.filter(r => {
+            const lat = parseFloat(r.latitude);
+            const lng = parseFloat(r.longitude);
+            return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+          }).length);
+          setRescuers(mappedRescuers);
+        } else {
+          console.error('[RescuerLiveMap] Failed to fetch responders:', response.status);
+        }
+      } catch (error) {
+        console.error('[RescuerLiveMap] Error fetching responders:', error);
+      }
+    };
+
+    fetchResponders();
   }, []);
 
   // Fetch bases on mount
@@ -333,7 +411,14 @@ const RescuerLiveMap = () => {
         />
         <MapUpdater center={center} />
         
-        {rescuers.map((rescuer) => (
+        {rescuers
+          .filter((rescuer) => {
+            // Only show rescuers with valid coordinates
+            const lat = parseFloat(rescuer.latitude);
+            const lng = parseFloat(rescuer.longitude);
+            return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+          })
+          .map((rescuer) => (
           <Marker
             key={rescuer.id}
             position={[parseFloat(rescuer.latitude), parseFloat(rescuer.longitude)]}

@@ -230,6 +230,8 @@ const createBaseIcon = () => {
 const personIcon = createPersonIcon();
 const baseIcon = createBaseIcon();
 
+// Unused constant - kept for reference
+/*
 const isfahanRedCrescentBases = [
   {
     id: 'isf-hq',
@@ -262,6 +264,7 @@ const isfahanRedCrescentBases = [
     address: 'محور اصفهان به شیراز، کیلومتر 10 جنوب شهرضا'
   }
 ] as const;
+*/
 
 const formatRelativeTime = (timestamp: Date | string) => {
   const createdAt = timestamp instanceof Date ? timestamp : new Date(timestamp);

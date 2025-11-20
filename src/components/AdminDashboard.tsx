@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Menu, X, Users, AlertTriangle, Building2, Settings, Home, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
-import Map from './Map';
 import AlertForm from './AlertForm';
 import IncidentsPage from './IncidentsPage';
 import BasesPage from './BasesPage';
