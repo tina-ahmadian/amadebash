@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapProvider } from './context/MapContext';
 import { mockResponders, mockAlerts } from './data/mockData';
 import AdminDashboard from './components/AdminDashboard';
@@ -9,8 +9,60 @@ import { Shield, User } from 'lucide-react';
 type ViewMode = 'selection' | 'login' | 'loginResponder' | 'admin' | 'responder';
 
 function App() {
-  const [viewMode, setViewMode] = useState<ViewMode>('selection');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Initialize viewMode from localStorage or default to 'selection'
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const savedViewMode = localStorage.getItem('viewMode') as ViewMode;
+    const token = localStorage.getItem('authToken');
+    
+    // If token exists and we have a saved view mode, use it
+    if (token && savedViewMode && (savedViewMode === 'admin' || savedViewMode === 'responder')) {
+      return savedViewMode;
+    }
+    
+    return 'selection';
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const token = localStorage.getItem('authToken');
+    return !!token;
+  });
+
+  // Check authentication on mount and restore view mode
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    const savedViewMode = localStorage.getItem('viewMode') as ViewMode;
+    
+    // This effect only runs once on mount to restore state
+    // The initial state is already set from localStorage in useState initializer
+    // This is just a safety check to ensure consistency
+    if (token && savedViewMode && (savedViewMode === 'admin' || savedViewMode === 'responder')) {
+      setIsAuthenticated(true);
+      setViewMode(savedViewMode);
+    } else if (token) {
+      // Token exists but no saved view mode - default to admin
+      setIsAuthenticated(true);
+      setViewMode('admin');
+      localStorage.setItem('viewMode', 'admin');
+    } else if (!token) {
+      // No token - clear everything
+      setIsAuthenticated(false);
+      setViewMode('selection');
+      localStorage.removeItem('viewMode');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
+  // Save viewMode to localStorage whenever it changes (but not on initial mount)
+  useEffect(() => {
+    if (viewMode === 'admin' || viewMode === 'responder') {
+      localStorage.setItem('viewMode', viewMode);
+    } else if (viewMode === 'selection' || viewMode === 'login' || viewMode === 'loginResponder') {
+      // Don't save selection/login states, but keep the authenticated state if token exists
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        localStorage.removeItem('viewMode');
+      }
+    }
+  }, [viewMode]);
 
   if (viewMode === 'selection') {
     return (
@@ -70,6 +122,7 @@ function App() {
         onLogin={() => {
           setIsAuthenticated(true);
           setViewMode('admin');
+          localStorage.setItem('viewMode', 'admin');
         }}
         onBack={() => setViewMode('selection')}
       />
@@ -83,6 +136,7 @@ function App() {
         onLogin={() => {
           setIsAuthenticated(true);
           setViewMode('responder');
+          localStorage.setItem('viewMode', 'responder');
         }}
         onBack={() => setViewMode('selection')}
       />
@@ -96,6 +150,8 @@ function App() {
           <AdminDashboard 
             onLogout={() => {
               setIsAuthenticated(false);
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('viewMode');
               setViewMode('login');
             }}
           />

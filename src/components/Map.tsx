@@ -457,10 +457,11 @@ const Map: React.FC<MapProps> = ({
     return sortedAlerts;
   }, [alerts]);
 
-  const limitedResponders = useMemo(() => responders.slice(0, 3), [responders]);
+  // Show all responders instead of limiting to 3
+  const displayedResponders = useMemo(() => responders, [responders]);
 
   const responderBaseConnections = useMemo(() => {
-    return limitedResponders.map(responder => {
+    return displayedResponders.map(responder => {
       const nearestBase = mappedBases.reduce((closestBase, base) => {
         const currentDistance = calculateDistance(responder.position, base.position);
         const closestDistance = calculateDistance(responder.position, closestBase.position);
@@ -473,7 +474,7 @@ const Map: React.FC<MapProps> = ({
         curvePoints: createBezierPoints(responder.position, nearestBase.position)
       };
     });
-  }, [limitedResponders, mappedBases]);
+  }, [displayedResponders, mappedBases]);
 
   const adjustedAlerts = useMemo(() => {
     let overlapCounter = 0;
@@ -504,7 +505,7 @@ const Map: React.FC<MapProps> = ({
 
   const fitBoundsPoints = useMemo(() => {
     const points: [number, number][] = [];
-    limitedResponders.forEach(responder => {
+    displayedResponders.forEach(responder => {
       points.push([responder.position.lat, responder.position.lng]);
     });
     adjustedAlerts.forEach(alert => {
@@ -514,11 +515,11 @@ const Map: React.FC<MapProps> = ({
       points.push([base.position.lat, base.position.lng]);
     });
     return points;
-  }, [limitedResponders, adjustedAlerts, mappedBases]);
+  }, [displayedResponders, adjustedAlerts, mappedBases]);
 
   const clusterFocusPoints = useMemo(() => {
     const responderAndAlertPoints: [number, number][] = [];
-    limitedResponders.forEach(responder => {
+    displayedResponders.forEach(responder => {
       responderAndAlertPoints.push([responder.position.lat, responder.position.lng]);
     });
     adjustedAlerts.forEach(alert => {
@@ -530,7 +531,7 @@ const Map: React.FC<MapProps> = ({
     }
 
     return mappedBases.map(base => [base.position.lat, base.position.lng] as [number, number]);
-  }, [adjustedAlerts, limitedResponders, mappedBases]);
+  }, [adjustedAlerts, displayedResponders, mappedBases]);
 
   // محاسبه مرکز و شعاع دایره برای هایلایت قرمز
   const highlightCircle = useMemo((): { center: [number, number]; radius: number } | null => {
@@ -542,7 +543,7 @@ const Map: React.FC<MapProps> = ({
     });
     
     // اضافه کردن امدادگران
-    limitedResponders.forEach(responder => {
+    displayedResponders.forEach(responder => {
       allPoints.push(responder.position);
     });
 
@@ -573,7 +574,7 @@ const Map: React.FC<MapProps> = ({
       center: [centerLat, centerLng],
       radius: radius
     };
-  }, [mappedBases, limitedResponders]);
+  }, [mappedBases, displayedResponders]);
 
   return (
     <MapContainer
@@ -640,7 +641,7 @@ const Map: React.FC<MapProps> = ({
         </Marker>
       ))}
 
-      {limitedResponders.map(responder => (
+      {displayedResponders.map(responder => (
         <Marker
           key={responder.id}
           position={[responder.position.lat, responder.position.lng]}
