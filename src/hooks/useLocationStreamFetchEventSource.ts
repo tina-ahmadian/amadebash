@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { API_BASE_URL } from '../services/apiConfig';
 // @ts-ignore - Optional dependency
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error - Optional dependency, may not be installed
@@ -118,7 +119,7 @@ export function useLocationStream({
     abortControllerRef.current = abortController;
 
     try {
-      await fetchEventSource('http://87.107.174.39/api/api/v1/sse/location/stream', {
+      await fetchEventSource(`${API_BASE_URL}/sse/location/stream`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

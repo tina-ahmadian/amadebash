@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { API_BASE_URL } from '../services/apiConfig';
 
 interface LoginProps {
   onLogin: () => void;
@@ -13,6 +14,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, loginType = 'admin' }) =
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+    const [accessToken, setAccessToken] = useState<string | null>(null); // Store access token in memory, refresh token in localStorage
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,8 +24,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, loginType = 'admin' }) =
     try {
       // Determine API endpoint and body based on login type
       const apiEndpoint = loginType === 'admin' 
-        ? '/api/api/v1/auth/admin/login'
-        : '/api/api/v1/auth/rescuer/login';
+        ? `${API_BASE_URL}/auth/admin/login`
+        : `${API_BASE_URL}/auth/rescuer/login`;
       
       const requestBody = loginType === 'admin'
         ? { username: username, password: password }
@@ -69,7 +71,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, loginType = 'admin' }) =
         // For responder login, fetch accidents list
         if (loginType === 'responder') {
           try {
-            const accidentsResponse = await fetch('/api/api/v1/accidents', {
+            const accidentsResponse = await fetch(`${API_BASE_URL}/accidents`, {
               method: 'GET',
               headers: {
                 'Authorization': `Bearer ${token || 'demo-token'}`,

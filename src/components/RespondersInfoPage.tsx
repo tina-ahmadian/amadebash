@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Search, User, Phone, MapPin, Shield, CheckCircle, XCircle, Clock, Plus, X, AlertCircle, ChevronDown, Trash2, Copy } from 'lucide-react';
 import { Responder, ResponderStatus, Base } from '../data/mockData';
 import { useMapContext } from '../context/MapContext';
+import { API_BASE_URL } from '../services/apiConfig';
 
 const expertCategoryOptions = [
   { value: '', label: 'انتخاب کنید' },
@@ -62,7 +63,7 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
         return;
       }
 
-      const response = await fetch('/api/api/v1/bases', {
+      const response = await fetch(`${API_BASE_URL}/bases`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -119,7 +120,7 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
       }
 
       // Call API
-      const response = await fetch('/api/api/v1/rescuers', {
+      const response = await fetch(`${API_BASE_URL}/rescuers`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -331,7 +332,7 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
       console.log('Creating new rescuer with payload:', payload);
 
       // Call API
-      const response = await fetch('/api/api/v1/rescuers', {
+      const response = await fetch(`${API_BASE_URL}/rescuers`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -408,7 +409,7 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
 
       console.log('Deleting rescuer with ID:', responderId);
 
-      const response = await fetch(`/api/api/v1/rescuers/${responderId}`, {
+      const response = await fetch(`${API_BASE_URL}/rescuers/${responderId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

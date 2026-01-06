@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Building2, MapPin, Users, CheckCircle, XCircle, Plus, X, Search, AlertCircle, Trash2, Copy } from 'lucide-react';
 import { Base } from '../data/mockData';
 import LocationPickerMap from './LocationPickerMap';
+import { API_BASE_URL } from '../services/apiConfig';
 
 interface BasesPageProps {
   bases: Base[];
@@ -42,7 +43,7 @@ const BasesPage: React.FC<BasesPageProps> = ({ bases }) => {
       }
 
       // Call API
-      const response = await fetch('/api/api/v1/bases', {
+        const response = await fetch(`${API_BASE_URL}/bases`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -161,7 +162,7 @@ const BasesPage: React.FC<BasesPageProps> = ({ bases }) => {
       console.log('Sending base data:', requestBody);
 
       // Call API (استفاده از مسیر نسبی برای عبور از پروکسی)
-      const response = await fetch('/api/api/v1/bases', {
+        const response = await fetch(`${API_BASE_URL}/bases`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -246,7 +247,7 @@ const BasesPage: React.FC<BasesPageProps> = ({ bases }) => {
       console.log('Deleting base with ID:', baseToDelete.id);
 
       // Call delete API
-      const response = await fetch(`/api/api/v1/bases/${baseToDelete.id}`, {
+        const response = await fetch(`${API_BASE_URL}/bases/${baseToDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

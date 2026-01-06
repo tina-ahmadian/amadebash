@@ -3,6 +3,7 @@
  */
 
 class LiveLocationService {
+  const { API_BASE_URL } = require('./apiConfig');
   constructor() {
     this.isStreaming = false;
     this.abortController = null;
@@ -36,11 +37,11 @@ class LiveLocationService {
       }
 
       console.log('[LiveLocation] Token found, connecting to SSE endpoint...');
-      console.log('[LiveLocation] Endpoint: /api/api/v1/sse/location/stream');
+      console.log(`[LiveLocation] Endpoint: ${API_BASE_URL}/sse/location/stream`);
 
       this.abortController = new AbortController();
 
-      const response = await fetch('/api/api/v1/sse/location/stream', {
+      const response = await fetch(`${API_BASE_URL}/sse/location/stream`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -179,7 +180,7 @@ class LiveLocationService {
 
       console.log('[LiveLocation] Sending location update:', { latitude, longitude });
 
-      const response = await fetch('/api/v1/location/update', {
+      const response = await fetch(`${API_BASE_URL}/location/update`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

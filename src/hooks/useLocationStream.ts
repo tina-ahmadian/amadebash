@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { API_BASE_URL } from '../services/apiConfig';
 
 /**
  * Location data structure for a rescuer
@@ -166,7 +167,7 @@ export function useLocationStream({
     abortControllerRef.current = abortController;
     
     try {
-      const response = await fetch('http://87.107.174.39/api/api/v1/sse/location/stream', {
+      const response = await fetch(`${API_BASE_URL}/sse/location/stream`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,

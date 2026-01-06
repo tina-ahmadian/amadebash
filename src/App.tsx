@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import tokenManager from './services/TokenManager';
 import { MapProvider } from './context/MapContext';
 import { mockResponders, mockAlerts } from './data/mockData';
 import AdminDashboard from './components/AdminDashboard';
@@ -12,38 +13,30 @@ function App() {
   // Initialize viewMode from localStorage or default to 'selection'
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const savedViewMode = localStorage.getItem('viewMode') as ViewMode;
-    const token = localStorage.getItem('authToken');
-    
+    const accessToken = tokenManager.getAccessToken();
     // If token exists and we have a saved view mode, use it
-    if (token && savedViewMode && (savedViewMode === 'admin' || savedViewMode === 'responder')) {
+    if (accessToken && savedViewMode && (savedViewMode === 'admin' || savedViewMode === 'responder')) {
       return savedViewMode;
     }
-    
     return 'selection';
   });
   const [, setIsAuthenticated] = useState(() => {
-    const token = localStorage.getItem('authToken');
-    return !!token;
+    const accessToken = tokenManager.getAccessToken();
+    return !!accessToken;
   });
 
   // Check authentication on mount and restore view mode
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
+    const accessToken = tokenManager.getAccessToken();
     const savedViewMode = localStorage.getItem('viewMode') as ViewMode;
-    
-    // This effect only runs once on mount to restore state
-    // The initial state is already set from localStorage in useState initializer
-    // This is just a safety check to ensure consistency
-    if (token && savedViewMode && (savedViewMode === 'admin' || savedViewMode === 'responder')) {
+    if (accessToken && savedViewMode && (savedViewMode === 'admin' || savedViewMode === 'responder')) {
       setIsAuthenticated(true);
       setViewMode(savedViewMode);
-    } else if (token) {
-      // Token exists but no saved view mode - default to admin
+    } else if (accessToken) {
       setIsAuthenticated(true);
       setViewMode('admin');
       localStorage.setItem('viewMode', 'admin');
-    } else if (!token) {
-      // No token - clear everything
+    } else {
       setIsAuthenticated(false);
       setViewMode('selection');
       localStorage.removeItem('viewMode');
@@ -150,7 +143,7 @@ function App() {
           <AdminDashboard 
             onLogout={() => {
               setIsAuthenticated(false);
-              localStorage.removeItem('authToken');
+              tokenManager.clearTokens();
               localStorage.removeItem('viewMode');
               setViewMode('login');
             }}
