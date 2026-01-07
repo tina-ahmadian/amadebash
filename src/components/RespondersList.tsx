@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, Activity, Phone } from 'lucide-react';
 import { Responder } from '../data/mockData';
+import ProfilePictureUploadModal from './ProfilePictureUploadModal';
+import { updateProfilePicture } from '../services/ProfilePictureService';
 
 interface RespondersListProps {
   responders: Responder[];
 }
 
 const RespondersList: React.FC<RespondersListProps> = ({ responders }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedResponder, setSelectedResponder] = useState<Responder | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -33,6 +40,32 @@ const RespondersList: React.FC<RespondersListProps> = ({ responders }) => {
     }
   };
 
+  const handleOpenModal = (responder: Responder) => {
+    setSelectedResponder(responder);
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedResponder(null);
+  };
+
+  const handleUpload = async (file: File) => {
+    if (!selectedResponder) return;
+    setLoading(true);
+    setSuccessMessage(null);
+    try {
+      const token = localStorage.getItem('authToken') || '';
+      await updateProfilePicture(selectedResponder.id, file, token);
+      setSuccessMessage('عکس پروفایل با موفقیت تغییر کرد');
+      setModalOpen(false);
+    } catch (error) {
+      setSuccessMessage('خطا در تغییر عکس پروفایل');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-4 h-full overflow-y-auto">
       <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-200">
@@ -55,6 +88,12 @@ const RespondersList: React.FC<RespondersListProps> = ({ responders }) => {
                   </span>
                   <User className="w-4 h-4 text-gray-400" />
                 </div>
+                <button
+                  className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                  onClick={() => handleOpenModal(responder)}
+                >
+                  تغییر عکس پروفایل
+                </button>
               </div>
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(responder.status)}`}>
                 {getStatusText(responder.status)}
@@ -75,6 +114,16 @@ const RespondersList: React.FC<RespondersListProps> = ({ responders }) => {
           </div>
         ))}
       </div>
+      <ProfilePictureUploadModal
+        isOpen={modalOpen}
+        onClose={handleCloseModal}
+        onUpload={handleUpload}
+      />
+      {successMessage && (
+        <div className="mt-4 text-center text-green-600 font-semibold">
+          {successMessage}
+        </div>
+      )}
     </div>
   );
 };
