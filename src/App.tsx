@@ -60,12 +60,12 @@ function App() {
   if (viewMode === 'selection') {
     return (
       <div className="min-h-screen relative flex items-center justify-center p-4 sm:p-6 md:p-8">
-        <div className="absolute inset-0 bg-[url('/images/emdad2.png')] bg-cover bg-center bg-fixed blur-sm"></div>
+        <div className="absolute inset-0 bg-[url('/web-apps/rescue-link/images/emdad2.png')] bg-cover bg-center bg-fixed blur-sm"></div>
         <div className="relative max-w-4xl w-full z-10">
           <div className="text-center mb-6 sm:mb-8 md:mb-10">
             <div className="bg-white py-3 px-4 sm:py-4 sm:px-5 rounded-lg">
               <div className="flex items-center justify-center gap-3 mb-1">
-                <img src="/images/logo.svg" alt="هلال احمر" className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24" />
+                <img src="/web-apps/rescue-link/images/logo.svg" alt="هلال احمر" className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24" />
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2 sm:mb-3 md:mb-4">سامانه آماده‌باش هلال‌احمر</h1>
               <p className="text-sm sm:text-base text-gray-600">سیستم مدیریت امدادگران و اعلان‌های حوادث</p>

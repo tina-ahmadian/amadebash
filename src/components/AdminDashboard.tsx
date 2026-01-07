@@ -35,7 +35,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           return;
         }
 
-        const response = await fetch('/api/api/v1/bases', {
+        const response = await fetch('/apis/rescue-link/v1/bases', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -99,7 +99,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       const token = localStorage.getItem('authToken');
       
       // Call logout API
-      const response = await fetch('/api/api/v1/auth/logout', {
+      const response = await fetch('/apis/rescue-link/v1/auth/logout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -260,7 +260,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <span className="relative inline-flex items-center justify-center pr-10 sm:pr-12 md:pr-14">
                     <span className="absolute right-0 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-white border border-red-100 shadow-sm flex items-center justify-center select-none pointer-events-none">
                       <img
-                        src="/images/logo2.png"
+                        src="/web-apps/rescue-link/images/logo2.png"
                         alt=""
                         aria-hidden="true"
                         className="w-10 h-6 sm:w-14 sm:h-8 md:w-18 md:h-10"

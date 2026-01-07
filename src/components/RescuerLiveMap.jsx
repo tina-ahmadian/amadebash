@@ -208,7 +208,7 @@ const RescuerLiveMap = () => {
           return;
         }
 
-        const response = await fetch('/api/api/v1/rescuers', {
+        const response = await fetch('/apis/rescue-link/v1/rescuers', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -262,7 +262,7 @@ const RescuerLiveMap = () => {
           return;
         }
 
-        const response = await fetch('/api/api/v1/bases', {
+        const response = await fetch('/apis/rescue-link/v1/bases', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

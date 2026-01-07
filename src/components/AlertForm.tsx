@@ -534,7 +534,7 @@ const AlertForm: React.FC<AlertFormProps> = ({ onClose }) => {
           return;
         }
 
-        const response = await fetch('/api/api/v1/bases', {
+        const response = await fetch('/apis/rescue-link/v1/bases', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -741,7 +741,7 @@ const AlertForm: React.FC<AlertFormProps> = ({ onClose }) => {
       console.log('Payload JSON:', JSON.stringify(payload, null, 2));
 
       // Call API
-      const response = await fetch('/api/api/v1/accidents', {
+      const response = await fetch('/apis/rescue-link/v1/accidents', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -34,7 +34,7 @@ const IncidentsPage: React.FC<IncidentsPageProps> = ({ alerts, responders }) => 
         return;
       }
 
-      const response = await fetch('/api/api/v1/accidents', {
+      const response = await fetch('/apis/rescue-link/v1/accidents', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -116,7 +116,7 @@ const IncidentsPage: React.FC<IncidentsPageProps> = ({ alerts, responders }) => 
 
       console.log('Deleting accident with ID:', accidentId);
 
-      const response = await fetch(`/api/api/v1/accidents/${accidentId}`, {
+      const response = await fetch(`/apis/rescue-link/v1/accidents/${accidentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

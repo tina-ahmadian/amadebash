@@ -28,7 +28,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, loginType = 'admin' }) =
         : `${API_BASE_URL}/auth/rescuer/login`;
       
       const requestBody = loginType === 'admin'
-        ? { username: username, password: password }
+        ? { username: username, password: password, device_id: 'web-client-' + Date.now() }
         : { 
             phone_number: username, 
             password: password,
@@ -111,7 +111,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, loginType = 'admin' }) =
   };
 
   // Get background image based on login type
-  const backgroundImage = loginType === 'admin' ? '/images/adminlogin.png' : '/images/helal.png';
+  const backgroundImage = loginType === 'admin' ? '/web-apps/rescue-link/images/adminlogin.png' : '/web-apps/rescue-link/images/helal.png';
 
   // Full screen background with centered glassmorphism form
   return (
@@ -128,7 +128,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, loginType = 'admin' }) =
       
       {/* Corner logo */}
       <img 
-        src="/images/logo2.png" 
+        src="/web-apps/rescue-link/images/logo2.png" 
         alt="لوگوی هلال احمر" 
         className="absolute top-2 left-2 sm:top-4 sm:left-4 w-20 h-16 sm:w-24 sm:h-20 md:w-28 md:h-24 z-10 drop-shadow-lg" 
       />
@@ -151,7 +151,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, loginType = 'admin' }) =
             <div className="text-center mb-4 sm:mb-5">
               <div className="flex justify-center mb-2 sm:mb-3">
                 <div className="rounded-full flex items-center bg-white/10 p-1 backdrop-blur-sm">
-                  <img src="/images/logo2.png" alt="لوگوی هلال احمر" className="w-16 h-12 sm:w-20 sm:h-16" />
+                  <img src="/web-apps/rescue-link/images/logo2.png" alt="لوگوی هلال احمر" className="w-16 h-12 sm:w-20 sm:h-16" />
                 </div>
               </div>
               <h1 className="text-lg sm:text-xl font-bold text-white mb-1">

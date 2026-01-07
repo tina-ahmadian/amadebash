@@ -21,7 +21,7 @@ const ResponderDashboard: React.FC = () => {
           return;
         }
 
-        const response = await fetch('/api/api/v1/accidents', {
+        const response = await fetch('/apis/rescue-link/v1/accidents', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -123,7 +123,7 @@ const ResponderDashboard: React.FC = () => {
                 <span className="relative inline-flex items-center justify-center pr-10 sm:pr-12 md:pr-14">
                   <span className="absolute right-0 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-white border border-red-100 shadow-sm flex items-center justify-center select-none pointer-events-none">
                     <img
-                      src="/images/logo2.png"
+                      src="/web-apps/rescue-link/images/logo2.png"
                       alt=""
                       aria-hidden="true"
                       className="w-10 h-6 sm:w-14 sm:h-8 md:w-18 md:h-10"
