@@ -4,6 +4,100 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom styles for rescuer markers */
+.custom-rescuer-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.arrow-btn-rescuer:hover {
+  background: #7c2d9a !important;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Custom popup style to open from left */
+.custom-popup-left {
+  direction: rtl;
+}
+
+.custom-popup-left .leaflet-popup-content-wrapper {
+  direction: rtl;
+  text-align: right;
+}
+
+.custom-popup-left .leaflet-popup-tip-container {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+}
+
+.custom-popup-left .leaflet-popup-tip {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+}
+
+/* Custom popup style for arrow button - small rectangle next to arrow */
+.custom-popup-arrow {
+  direction: rtl;
+}
+
+.custom-popup-arrow .leaflet-popup-content-wrapper {
+  direction: rtl;
+  text-align: right;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 0;
+  background: white;
+}
+
+.custom-popup-arrow .leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+}
+
+.custom-popup-arrow .leaflet-popup-tip-container {
+  left: 0 !important;
+  right: auto !important;
+  transform: translateX(0) !important;
+  margin-left: 8px;
+}
+
+.custom-popup-arrow .leaflet-popup-tip {
+  left: 0 !important;
+  right: auto !important;
+  transform: translateX(0) !important;
+  border: none;
+  box-shadow: none;
+}
+
+/* RTL popup styles */
+.custom-popup-rtl .leaflet-popup-content-wrapper {
+  direction: rtl;
+  text-align: right;
+}
+
+.custom-popup-rtl .leaflet-popup-content {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Popup animation from left to right (RTL) */
+.leaflet-popup {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 @layer base {
   * {
     margin: 0;

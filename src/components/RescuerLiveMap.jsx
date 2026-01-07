@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import LiveLocationService from '../services/LiveLocationService';
@@ -36,22 +36,103 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
-// Create custom marker icon for rescuers
-const createCustomIcon = (color) => {
-  return L.divIcon({
-    className: 'custom-marker',
-    html: `
+// Create custom location pin icon with person for rescuers based on status color
+const createCustomIcon = (color, rescuerId) => {
+  // Map color to darker shade for the person icon
+  const darkColor = color === '#10B981' ? '#16A34A' : // green -> darker green
+                    color === '#EF4444' ? '#DC2626' : // red -> darker red
+                    color === '#F97316' ? '#EA580C' : // orange -> darker orange
+                    '#3B82F6'; // default blue
+  
+  // Generate unique filter ID to avoid conflicts
+  const filterId = `shadow-rescuer-${rescuerId}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Create HTML element for custom icon with photo circle and arrow
+  const html = `
+    <div class="custom-rescuer-marker-wrapper" data-rescuer-id="${rescuerId}" style="position: relative; width: 48px; height: 100px; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
+      <!-- Photo circle at top -->
+      <div style="position: relative; z-index: 10; pointer-events: auto;">
+        <div style="
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border: 3px solid white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 16px;
+        ">👤</div>
+        <!-- Arrow button -->
+        <div 
+          class="arrow-btn-rescuer" 
+          data-rescuer-id="${rescuerId}"
+          style="
+            position: absolute;
+            right: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #9333EA;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            padding: 0;
+            z-index: 11;
+            pointer-events: auto;
+            transition: background 0.2s;
+          "
+        >▶</div>
+      </div>
+      <!-- Small circle connector -->
       <div style="
-        width: 24px;
-        height: 24px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
-        background-color: ${color};
-        border: 3px solid white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        background: #9333EA;
+        border: 2px solid #9333EA;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        margin-top: 2px;
+        margin-bottom: 2px;
+        z-index: 9;
+        flex-shrink: 0;
       "></div>
-    `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+      <!-- Location pin icon -->
+      <div style="margin-top: 0;">
+        <svg width="48" height="64" viewBox="0 0 48 64" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="${filterId}" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+            </filter>
+          </defs>
+          <g filter="url(#${filterId})">
+            <path d="M 24 4 C 14 4 6 12 6 22 C 6 32 18 48 24 56 C 30 48 42 32 42 22 C 42 12 34 4 24 4 Z" 
+                  fill="${color}" stroke="#FFFFFF" stroke-width="1.5"/>
+            <circle cx="24" cy="22" r="13" fill="#FFFFFF"/>
+            <circle cx="24" cy="16" r="4" fill="#000000"/>
+            <path d="M16 27C16 24.7909 17.7909 23 20 23H28C30.2091 23 32 24.7909 32 27V28C32 28.5523 31.5523 29 31 29H17C16.4477 29 16 28.5523 16 28V27Z" fill="#000000"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+  `;
+  
+  return new L.DivIcon({
+    html: html,
+    className: 'custom-rescuer-icon',
+    iconSize: [48, 100],
+    iconAnchor: [24, 100],
+    popupAnchor: [32, -20] // Position popup next to the arrow button
   });
 };
 
@@ -97,10 +178,11 @@ const baseIcon = createBaseIcon();
 const RescuerLiveMap = () => {
   const [rescuers, setRescuers] = useState([]);
   const [bases, setBases] = useState([]);
-  const [selectedRescuer, setSelectedRescuer] = useState(null);
+  const [incidents, setIncidents] = useState([]);
   const [center, setCenter] = useState(defaultCenter);
   const [error, setError] = useState(null);
   const [showMockData, setShowMockData] = useState(false);
+  const markerRefs = useRef({});
 
   // Mock data for demonstration
   const loadMockData = () => {
@@ -112,6 +194,7 @@ const RescuerLiveMap = () => {
         longitude: 51.3890,
         status: 'active',
         lastUpdate: new Date().toISOString(),
+        baseId: 'mock-base-1',
       },
       {
         id: 2,
@@ -120,6 +203,7 @@ const RescuerLiveMap = () => {
         longitude: 51.4090,
         status: 'busy',
         lastUpdate: new Date(Date.now() - 300000).toISOString(),
+        baseId: 'mock-base-2',
       },
       {
         id: 3,
@@ -128,6 +212,7 @@ const RescuerLiveMap = () => {
         longitude: 51.3690,
         status: 'active',
         lastUpdate: new Date(Date.now() - 120000).toISOString(),
+        baseId: 'mock-base-1',
       },
       {
         id: 4,
@@ -136,9 +221,40 @@ const RescuerLiveMap = () => {
         longitude: 51.4190,
         status: 'inactive',
         lastUpdate: new Date(Date.now() - 600000).toISOString(),
+        baseId: 'mock-base-3',
       },
     ];
+    
+    // Mock bases for demonstration
+    const mockBases = [
+      {
+        id: 'mock-base-1',
+        code: 'پایگاه 1',
+        name: 'پایگاه مرکزی',
+        address: 'تهران، میدان ولیعصر',
+        latitude: 35.6942,
+        longitude: 51.3890,
+      },
+      {
+        id: 'mock-base-2',
+        code: 'پایگاه 2',
+        name: 'پایگاه شمالی',
+        address: 'تهران، میدان ونک',
+        latitude: 35.7192,
+        longitude: 51.4090,
+      },
+      {
+        id: 'mock-base-3',
+        code: 'پایگاه 3',
+        name: 'پایگاه جنوبی',
+        address: 'تهران، میدان آزادی',
+        latitude: 35.6692,
+        longitude: 51.3490,
+      },
+    ];
+    
     setRescuers(mockRescuers);
+    setBases(mockBases);
     setShowMockData(true);
   };
 
@@ -171,6 +287,8 @@ const RescuerLiveMap = () => {
           longitude: data.longitude || data.lng || updated[index].longitude,
           status: data.status || updated[index].status,
           lastUpdate: data.timestamp || data.last_update || new Date().toISOString(),
+          baseId: data.base_id || data.baseId || updated[index].baseId,
+          baseName: data.base_name || data.baseName || updated[index].baseName,
         };
         console.log('[RescuerLiveMap] Updated rescuer:', updated[index]);
         console.log('[RescuerLiveMap] Total rescuers after update:', updated.length);
@@ -184,6 +302,8 @@ const RescuerLiveMap = () => {
           longitude: data.longitude || data.lng || 0,
           status: data.status || 'active',
           lastUpdate: data.timestamp || data.last_update || new Date().toISOString(),
+          baseId: data.base_id || data.baseId || null,
+          baseName: data.base_name || data.baseName || null,
         };
         console.log('[RescuerLiveMap] Added new rescuer:', newRescuer);
         const newList = [...prev, newRescuer];
@@ -231,6 +351,8 @@ const RescuerLiveMap = () => {
             longitude: rescuer.longitude || 0,
             status: rescuer.status || 'inactive',
             lastUpdate: rescuer.last_update || new Date().toISOString(),
+            baseId: rescuer.base_id || rescuer.baseId || null,
+            baseName: rescuer.base_name || rescuer.baseName || null,
           }));
           
           console.log('[RescuerLiveMap] Mapped rescuers:', mappedRescuers);
@@ -288,6 +410,51 @@ const RescuerLiveMap = () => {
     fetchBases();
   }, []);
 
+  // Fetch incidents/accidents on mount
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.error('[RescuerLiveMap] No auth token for fetching incidents');
+          return;
+        }
+
+        const response = await fetch('/apis/rescue-link/v1/accidents', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[RescuerLiveMap] Incidents API Response:', data);
+          
+          // Handle different possible response structures
+          let incidentsData = [];
+          if (data.success && Array.isArray(data.data)) {
+            incidentsData = data.data;
+          } else if (Array.isArray(data)) {
+            incidentsData = data;
+          } else if (data.data && Array.isArray(data.data)) {
+            incidentsData = data.data;
+          }
+          
+          console.log('[RescuerLiveMap] Incidents loaded:', incidentsData);
+          setIncidents(incidentsData);
+        } else {
+          console.error('[RescuerLiveMap] Failed to fetch incidents:', response.status);
+        }
+      } catch (error) {
+        console.error('[RescuerLiveMap] Error fetching incidents:', error);
+      }
+    };
+
+    fetchIncidents();
+  }, []);
+
   useEffect(() => {
     console.log('[RescuerLiveMap] Component mounted, starting location stream...');
     LiveLocationService.startStream(handleLocationUpdate, handleError);
@@ -297,6 +464,38 @@ const RescuerLiveMap = () => {
       LiveLocationService.stopStream();
     };
   }, [handleLocationUpdate, handleError]);
+
+  // Add event listeners for arrow buttons to open popup
+  useEffect(() => {
+    const handleArrowClick = (e) => {
+      const arrowBtn = e.target.closest('.arrow-btn-rescuer');
+      if (arrowBtn) {
+        e.stopPropagation();
+        e.preventDefault();
+        const rescuerId = arrowBtn.getAttribute('data-rescuer-id');
+        if (rescuerId && markerRefs.current[rescuerId]) {
+          const marker = markerRefs.current[rescuerId];
+          if (marker && marker.leafletElement) {
+            // Close popup first if open, then open it to ensure it always opens
+            marker.leafletElement.closePopup();
+            setTimeout(() => {
+              marker.leafletElement.openPopup();
+            }, 10);
+          }
+        }
+      }
+    };
+
+    // Use event delegation on document with a small delay to ensure markers are rendered
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('click', handleArrowClick, true);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('click', handleArrowClick, true);
+    };
+  }, [rescuers]);
 
   useEffect(() => {
     if (rescuers.length > 0) {
@@ -333,9 +532,186 @@ const RescuerLiveMap = () => {
     }
   };
 
+  const getBaseName = (rescuer) => {
+    // First check if baseName is directly available
+    if (rescuer.baseName) return rescuer.baseName;
+    
+    // Then check if baseId is available and find the base
+    if (rescuer.baseId) {
+      const base = bases.find(b => b.id?.toString() === rescuer.baseId?.toString());
+      if (base) {
+        return base.name || base.code || 'نامشخص';
+      }
+    }
+    
+    return 'نامشخص';
+  };
+
   const activeCount = rescuers.filter(r => r.status === 'active').length;
   const busyCount = rescuers.filter(r => r.status === 'busy').length;
   const inactiveCount = rescuers.filter(r => r.status === 'inactive').length;
+
+  // Helper function to calculate distance between two points (Haversine formula)
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Helper function to create curved line points (Bezier curve)
+  const createCurvedLine = (start, end) => {
+    const [startLat, startLng] = start;
+    const [endLat, endLng] = end;
+    
+    // Calculate midpoint
+    const midLat = (startLat + endLat) / 2;
+    const midLng = (startLng + endLng) / 2;
+    
+    // Calculate distance to determine curve height
+    const distance = calculateDistance(startLat, startLng, endLat, endLng);
+    const curveHeight = distance * 0.15; // 15% of distance as curve height
+    
+    // Calculate perpendicular direction for curve
+    const dx = endLng - startLng;
+    const dy = endLat - startLat;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    
+    // Perpendicular vector (rotated 90 degrees)
+    const perpX = -dy / length;
+    const perpY = dx / length;
+    
+    // Control point for Bezier curve (offset from midpoint)
+    const controlLat = midLat + perpY * (curveHeight / 111); // Convert km to degrees (approx)
+    const controlLng = midLng + perpX * (curveHeight / (111 * Math.cos(midLat * Math.PI / 180)));
+    
+    // Generate points along the Bezier curve
+    const points = [];
+    const numPoints = 50; // Number of points for smooth curve
+    
+    for (let i = 0; i <= numPoints; i++) {
+      const t = i / numPoints;
+      // Quadratic Bezier curve formula
+      const lat = (1 - t) * (1 - t) * startLat + 2 * (1 - t) * t * controlLat + t * t * endLat;
+      const lng = (1 - t) * (1 - t) * startLng + 2 * (1 - t) * t * controlLng + t * t * endLng;
+      points.push([lat, lng]);
+    }
+    
+    return points;
+  };
+
+  // Calculate connection lines between bases and accepted rescuers
+  const connectionLines = useMemo(() => {
+    const lines = [];
+    
+    // If showing mock data, connect each rescuer to nearest base
+    if (showMockData && bases.length > 0) {
+      rescuers.forEach((rescuer) => {
+        if (!rescuer.latitude || !rescuer.longitude) return;
+        
+        const rescuerLat = parseFloat(rescuer.latitude);
+        const rescuerLng = parseFloat(rescuer.longitude);
+        
+        if (isNaN(rescuerLat) || isNaN(rescuerLng) || rescuerLat === 0 || rescuerLng === 0) {
+          return;
+        }
+        
+        // Find nearest base
+        let nearestBase = null;
+        let minDistance = Infinity;
+        
+        bases.forEach((base) => {
+          if (!base.latitude || !base.longitude) return;
+          
+          const baseLat = parseFloat(base.latitude);
+          const baseLng = parseFloat(base.longitude);
+          
+          if (isNaN(baseLat) || isNaN(baseLng) || baseLat === 0 || baseLng === 0) {
+            return;
+          }
+          
+          const distance = calculateDistance(rescuerLat, rescuerLng, baseLat, baseLng);
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestBase = base;
+          }
+        });
+        
+        // Create curved line from rescuer to nearest base
+        if (nearestBase) {
+          const baseLat = parseFloat(nearestBase.latitude);
+          const baseLng = parseFloat(nearestBase.longitude);
+          
+          const startPoint = [baseLat, baseLng];
+          const endPoint = [rescuerLat, rescuerLng];
+          const curvedPoints = createCurvedLine(startPoint, endPoint);
+          
+          lines.push({
+            id: `mock-${rescuer.id}-${nearestBase.id}`,
+            positions: curvedPoints,
+            baseId: nearestBase.id,
+            rescuerId: rescuer.id,
+            incidentId: 'mock'
+          });
+        }
+      });
+    } else {
+      // For real data, use incidents with base_id and accepted_responders
+      incidents.forEach((incident) => {
+        const baseId = incident.base_id || incident.baseId;
+        const acceptedResponderIds = incident.accepted_responders || incident.acceptedResponders || [];
+        
+        if (!baseId || !acceptedResponderIds || acceptedResponderIds.length === 0) {
+          return;
+        }
+        
+        // Find the base
+        const base = bases.find(b => b.id?.toString() === baseId?.toString());
+        if (!base || !base.latitude || !base.longitude) {
+          return;
+        }
+        
+        const basePosition = [parseFloat(base.latitude), parseFloat(base.longitude)];
+        
+        // For each accepted rescuer, create a line
+        acceptedResponderIds.forEach((rescuerId) => {
+          const rescuer = rescuers.find(r => {
+            const rId = r.id?.toString();
+            const acceptedId = rescuerId?.toString();
+            return rId === acceptedId;
+          });
+          
+          if (rescuer && rescuer.latitude && rescuer.longitude) {
+            const rescuerLat = parseFloat(rescuer.latitude);
+            const rescuerLng = parseFloat(rescuer.longitude);
+            
+            // Only add line if coordinates are valid
+            if (!isNaN(rescuerLat) && !isNaN(rescuerLng) && rescuerLat !== 0 && rescuerLng !== 0) {
+              const startPoint = basePosition;
+              const endPoint = [rescuerLat, rescuerLng];
+              const curvedPoints = createCurvedLine(startPoint, endPoint);
+              
+              lines.push({
+                id: `${incident.id}-${rescuerId}`,
+                positions: curvedPoints,
+                baseId: base.id,
+                rescuerId: rescuer.id,
+                incidentId: incident.id
+              });
+            }
+          }
+        });
+      });
+    }
+    
+    console.log('[RescuerLiveMap] Connection lines:', lines);
+    return lines;
+  }, [incidents, bases, rescuers, showMockData]);
 
   return (
     <div className="w-full h-full relative">
@@ -357,9 +733,33 @@ const RescuerLiveMap = () => {
           </button>
         ) : (
           <button
-            onClick={() => {
+            onClick={async () => {
               setRescuers([]);
+              setBases([]);
               setShowMockData(false);
+              
+              // Reload real bases from API
+              try {
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                  const response = await fetch('/apis/rescue-link/v1/bases', {
+                    method: 'GET',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json',
+                    },
+                  });
+                  
+                  if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                      setBases(result.data);
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error('[RescuerLiveMap] Error reloading bases:', error);
+              }
             }}
             className="bg-white text-green-600 px-3 py-1 rounded text-xs font-semibold hover:bg-green-50 transition-colors"
           >
@@ -411,6 +811,20 @@ const RescuerLiveMap = () => {
         />
         <MapUpdater center={center} />
         
+        {/* Draw connection lines between bases and accepted rescuers */}
+        {connectionLines.map((line) => (
+          <Polyline
+            key={line.id}
+            positions={line.positions}
+            pathOptions={{
+              color: '#9333EA', // Purple color like in the image
+              weight: 2,
+              opacity: 0.8,
+              smoothFactor: 1
+            }}
+          />
+        ))}
+        
         {rescuers
           .filter((rescuer) => {
             // Only show rescuers with valid coordinates
@@ -421,35 +835,37 @@ const RescuerLiveMap = () => {
           .map((rescuer) => (
           <Marker
             key={rescuer.id}
+            ref={(ref) => {
+              if (ref) {
+                markerRefs.current[rescuer.id] = ref;
+              }
+            }}
             position={[parseFloat(rescuer.latitude), parseFloat(rescuer.longitude)]}
-            icon={createCustomIcon(getMarkerColor(rescuer.status))}
+            icon={createCustomIcon(getMarkerColor(rescuer.status), rescuer.id)}
             eventHandlers={{
-              click: () => setSelectedRescuer(rescuer),
+              click: () => {
+                // Open popup on marker click
+                if (markerRefs.current[rescuer.id]?.leafletElement) {
+                  markerRefs.current[rescuer.id].leafletElement.openPopup();
+                }
+              },
             }}
           >
-            <Popup>
-              <div className="p-2" dir="rtl">
-                <h3 className="font-bold text-lg mb-2">{rescuer.name}</h3>
-                <div className="space-y-1 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">وضعیت:</span>
-                    <span
-                      className="px-2 py-1 rounded-full text-xs font-medium"
-                      style={{
-                        backgroundColor: getMarkerColor(rescuer.status) + '20',
-                        color: getMarkerColor(rescuer.status),
-                      }}
-                    >
-                      {getStatusLabel(rescuer.status)}
-                    </span>
+            <Popup 
+              className="custom-popup-arrow"
+              autoPan={false}
+              closeButton={true}
+            >
+              <div className="p-3" dir="rtl" style={{ minWidth: '200px', maxWidth: '250px' }}>
+                <h3 className="font-bold text-base mb-3 text-gray-800 border-b pb-2">{rescuer.name}</h3>
+                <div className="space-y-2.5 text-sm">
+                  <div>
+                    <span className="font-semibold text-gray-700">پایگاه ارجاعی:</span>
+                    <span className="mr-2 text-gray-600">{getBaseName(rescuer)}</span>
                   </div>
                   <div>
-                    <span className="font-semibold">آخرین بروزرسانی:</span>
-                    <span className="mr-2">{formatTime(rescuer.lastUpdate)}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-2">
-                    <div>عرض: {parseFloat(rescuer.latitude).toFixed(6)}</div>
-                    <div>طول: {parseFloat(rescuer.longitude).toFixed(6)}</div>
+                    <span className="font-semibold text-gray-700">آخرین بروزرسانی:</span>
+                    <span className="mr-2 text-gray-600">{formatTime(rescuer.lastUpdate)}</span>
                   </div>
                 </div>
               </div>
@@ -492,4 +908,3 @@ const RescuerLiveMap = () => {
 };
 
 export default RescuerLiveMap;
-
