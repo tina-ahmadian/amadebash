@@ -306,10 +306,6 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
         if (cleanPhone.startsWith('+')) {
           return cleanPhone;
         }
-        // اگر با 0 شروع می‌شود، 0 را با +98 جایگزین کن
-        if (cleanPhone.startsWith('0')) {
-          return '+98' + cleanPhone.substring(1);
-        }
         // در غیر این صورت + را اضافه کن
         return '+' + cleanPhone;
       };
