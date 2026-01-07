@@ -1,5 +1,7 @@
+
 // TokenManager.ts
 // Handles JWT access/refresh token lifecycle, expiration, rotation, and secure storage
+import { API_BASE_URL } from './apiConfig';
 
 export interface TokenPayload {
   exp: number;
@@ -8,7 +10,6 @@ export interface TokenPayload {
 }
 
 function decodeJwt(token: string): TokenPayload | null {
-  import { API_BASE_URL } from './apiConfig';
   try {
     const payload = token.split('.')[1];
     return JSON.parse(atob(payload));

@@ -2,8 +2,9 @@
  * LiveLocationService - Minimal SSE service for real-time location tracking
  */
 
+import { API_BASE_URL } from './apiConfig';
+
 class LiveLocationService {
-  const { API_BASE_URL } = require('./apiConfig');
   constructor() {
     this.isStreaming = false;
     this.abortController = null;
