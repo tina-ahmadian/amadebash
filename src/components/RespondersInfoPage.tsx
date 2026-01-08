@@ -3,6 +3,7 @@ import { Search, User, Phone, MapPin, Shield, CheckCircle, XCircle, Clock, Plus,
 import { Responder, ResponderStatus, Base } from '../data/mockData';
 import { useMapContext } from '../context/MapContext';
 import { API_BASE_URL } from '../services/apiConfig';
+import ProfilePictureUploadModal from './ProfilePictureUploadModal';
 
 const expertCategoryOptions = [
   { value: '', label: 'انتخاب کنید' },
@@ -50,6 +51,12 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
   });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showAddSuccessModal, setShowAddSuccessModal] = useState(false);
+
+  // Profile picture upload modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedResponder, setSelectedResponder] = useState<Responder | null>(null);
+  const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   // Fetch bases from API
   const fetchBases = async () => {
@@ -157,7 +164,8 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
           lat: rescuer.latitude || 0,
           lng: rescuer.longitude || 0
         },
-        phone: rescuer.phone_number || ''
+        phone: rescuer.phone_number || '',
+        profilePictureUrl: `${API_BASE_URL}/users/${rescuer.id}/profile-picture`
       }));
       
       console.log('Mapped Responders:', mappedResponders);
@@ -474,8 +482,65 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
     return gender === 'male' ? 'مرد' : 'زن';
   };
 
+  const updateProfilePicture = async (id: string, file: File, token: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE_URL}/users/${id}/profile-picture`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    if (!response.ok) throw new Error('خطا در آپلود عکس');
+    return response.json();
+  };
+
+  const handleOpenModal = (responder: Responder) => {
+    setSelectedResponder(responder);
+    setModalOpen(true);
+    setUploadSuccessMessage(null);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedResponder(null);
+  };
+
+  const handleUpload = async (file: File) => {
+    if (!selectedResponder) return;
+    setUploadLoading(true);
+    setUploadSuccessMessage(null);
+    try {
+      const token = localStorage.getItem('authToken') || '';
+      await updateProfilePicture(selectedResponder.id, file, token);
+      setUploadSuccessMessage('عکس پروفایل با موفقیت تغییر کرد');
+      await fetchResponders();
+      setModalOpen(false);
+    } catch (error) {
+      setUploadSuccessMessage('خطا در تغییر عکس پروفایل');
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  const getProfilePictureUrl = (id: string) => `${API_BASE_URL}/users/${id}/profile-picture`;
+
   return (
     <div className="h-full flex flex-col bg-gray-50 text-right">
+      {/* Profile Picture Upload Modal */}
+      {modalOpen && (
+        <ProfilePictureUploadModal
+          isOpen={modalOpen}
+          onClose={handleCloseModal}
+          onUpload={handleUpload}
+        />
+      )}
+      {uploadSuccessMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-green-100 text-green-700 px-6 py-3 rounded-lg shadow-lg z-50">
+          {uploadSuccessMessage}
+        </div>
+      )}
       <div className="bg-gray-300 shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 text-right">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 sm:gap-3 mb-2 sm:mb-3">
           <div className="text-xs sm:text-sm text-gray-700 font-semibold text-right order-2 md:order-1">
@@ -850,11 +915,25 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
                 <div className="flex flex-row-reverse items-start justify-between mb-4 gap-4">
                   <div className="flex flex-row-reverse items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                      <User className="w-6 h-6 text-red-600" />
+                      {/* Show profile image if available, fallback to icon */}
+                      <img
+                        src={getProfilePictureUrl(responder.id)}
+                        alt="Profile"
+                        className="w-12 h-12 rounded-full object-cover border border-gray-300"
+                        onError={e => { e.currentTarget.style.display = 'none'; }}
+                        style={{ background: '#fff' }}
+                      />
+                      <User className="w-6 h-6 text-red-600 absolute top-0 left-0 right-0 bottom-0 m-auto" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-800">{responder.name}</h3>
                       <p className="text-sm text-gray-600">{getGenderLabel(responder.gender)}</p>
+                      <button
+                        className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                        onClick={() => handleOpenModal(responder)}
+                      >
+                        تغییر عکس پروفایل
+                      </button>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

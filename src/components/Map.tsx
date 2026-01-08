@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { getProfilePictureUrl } from '../services/GetProfilePictureService';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
+import { DivIcon } from 'leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Responder, Alert, Base } from '../data/mockData';
@@ -422,7 +424,7 @@ const Map: React.FC<MapProps> = ({
     delete (L.Icon.Default.prototype as any)._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNFNjAwMDAiLz4KPC9zdmc+',
-      iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNFNjAwMDAiLz4KPC9zdmc+',
+      iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1zbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNFNjAwMDAiLz4KPC9zdmc+',
       shadowUrl: ''
     });
   }, []);
@@ -579,6 +581,31 @@ const Map: React.FC<MapProps> = ({
     };
   }, [mappedBases, displayedResponders]);
 
+
+  const DEFAULT_AVATAR_URL = 'https://ui-avatars.com/api/?name=User&background=eee&color=555&size=128';
+
+  // State to hold profile picture URLs for responders
+  const [profilePictures, setProfilePictures] = useState<{ [id: string]: string }>({});
+
+  useEffect(() => {
+    const fetchProfilePictures = async () => {
+      const token = localStorage.getItem('authToken') || '';
+      const newProfilePictures: { [id: string]: string } = {};
+      await Promise.all(
+        displayedResponders.map(async (responder) => {
+          if (responder.id) {
+            const url = await getProfilePictureUrl(responder.id, token);
+            if (url) newProfilePictures[responder.id] = url;
+          }
+        })
+      );
+      setProfilePictures(newProfilePictures);
+    };
+    if (displayedResponders && displayedResponders.length > 0) {
+      fetchProfilePictures();
+    }
+  }, [displayedResponders]);
+
   return (
     <MapContainer
       center={center}
@@ -644,25 +671,112 @@ const Map: React.FC<MapProps> = ({
         </Marker>
       ))}
 
-      {displayedResponders.map(responder => (
-        <Marker
-          key={responder.id}
-          position={[responder.position.lat, responder.position.lng]}
-          icon={personIcon}
-        >
-          <Popup>
-            <div className="text-right" dir="rtl">
-              <h3 className="font-bold text-base sm:text-lg">{responder.name}</h3>
-              <p className="text-xs sm:text-sm">جنسیت: {responder.gender === 'male' ? 'مرد' : 'زن'}</p>
-              <p className="text-xs sm:text-sm">وضعیت: {
-                responder.status === 'active' ? 'فعال' :
-                responder.status === 'on_duty' ? 'در مأموریت' : 'غیرفعال'
-              }</p>
-              <p className="text-xs sm:text-sm">تلفن: {responder.phone}</p>
+      {displayedResponders.map(responder => {
+        // Custom marker icon with profile image
+        const profileUrl = profilePictures[responder.id] || DEFAULT_AVATAR_URL;
+        const markerHtml = `
+          <div class="custom-rescuer-marker-wrapper" data-rescuer-id="${responder.id}" style="position: relative; width: 48px; height: 100px; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
+            <div style="position: relative; z-index: 10; pointer-events: auto;">
+              <div style="
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border: 3px solid white;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+              ">
+                <img src='${profileUrl}' alt='Profile' style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+              </div>
+              <div class="arrow-btn-rescuer" data-rescuer-id="${responder.id}" style="
+                  position: absolute;
+                  right: -12px;
+                  top: 50%;
+                  transform: translateY(-50%);
+                  width: 20px;
+                  height: 20px;
+                  border-radius: 50%;
+                  background: #9333EA;
+                  border: 2px solid white;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                  cursor: pointer;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: white;
+                  font-size: 10px;
+                  padding: 0;
+                  z-index: 11;
+                  pointer-events: auto;
+                  transition: background 0.2s;
+                ">▶</div>
             </div>
-          </Popup>
-        </Marker>
-      ))}
+            <div style="
+              width: 8px;
+              height: 8px;
+              border-radius: 50%;
+              background: #9333EA;
+              border: 2px solid #9333EA;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+              margin-top: 2px;
+              margin-bottom: 2px;
+              z-index: 9;
+              flex-shrink: 0;
+            "></div>
+            <div style="margin-top: 0;">
+              <svg width="48" height="64" viewBox="0 0 48 64" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <filter id="shadow-rescuer-${responder.id}" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"></feDropShadow>
+                  </filter>
+                </defs>
+                <g filter="url(#shadow-rescuer-${responder.id})">
+                  <path d="M 24 4 C 14 4 6 12 6 22 C 6 32 18 48 24 56 C 30 48 42 32 42 22 C 42 12 34 4 24 4 Z" fill="#3B82F6" stroke="#FFFFFF" stroke-width="1.5"></path>
+                  <circle cx="24" cy="22" r="13" fill="#FFFFFF"></circle>
+                  <circle cx="24" cy="16" r="4" fill="#000000"></circle>
+                  <path d="M16 27C16 24.7909 17.7909 23 20 23H28C30.2091 23 32 24.7909 32 27V28C32 28.5523 31.5523 29 31 29H17C16.4477 29 16 28.5523 16 28V27Z" fill="#000000"></path>
+                </g>
+              </svg>
+            </div>
+          </div>
+        `;
+        const customIcon = new DivIcon({
+          html: markerHtml,
+          className: 'custom-rescuer-icon',
+          iconSize: [48, 100],
+          iconAnchor: [24, 100],
+          popupAnchor: [32, -20]
+        });
+        return (
+          <Marker
+            key={responder.id}
+            position={[responder.position.lat, responder.position.lng]}
+            icon={customIcon}
+          >
+            <Popup>
+              <div className="text-right" dir="rtl">
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                  <img
+                    src={profilePictures[responder.id] || DEFAULT_AVATAR_URL}
+                    alt="Profile"
+                    style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '1px solid #eee', marginLeft: 8 }}
+                  />
+                  <h3 className="font-bold text-base sm:text-lg">{responder.name}</h3>
+                </div>
+                <p className="text-xs sm:text-sm">جنسیت: {responder.gender === 'male' ? 'مرد' : 'زن'}</p>
+                <p className="text-xs sm:text-sm">وضعیت: {
+                  responder.status === 'active' ? 'فعال' :
+                  responder.status === 'on_duty' ? 'در مأموریت' : 'غیرفعال'
+                }</p>
+                <p className="text-xs sm:text-sm">تلفن: {responder.phone}</p>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
 
       {/* Draw smooth curved lines between responders and their nearest bases */}
       {responderBaseConnections.map(({ responder, base, curvePoints }) => (
