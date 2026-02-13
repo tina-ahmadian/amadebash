@@ -856,16 +856,16 @@ const RescuerLiveMap = () => {
               autoPan={false}
               closeButton={true}
             >
-              <div className="p-3" dir="rtl" style={{ minWidth: '200px', maxWidth: '250px' }}>
-                <h3 className="font-bold text-base mb-3 text-gray-800 border-b pb-2">{rescuer.name}</h3>
-                <div className="space-y-2.5 text-sm">
+              <div className="p-3 bg-gray-700 rounded-lg" dir="rtl" style={{ minWidth: '200px', maxWidth: '250px'}}>
+                <h3 className="text-xl text-base mb-3 text-white border-b pb-2 mt-4">{rescuer.name}</h3>
+                <div className="space-y-2.5 text-md bg-red-100 px-2">
                   <div>
-                    <span className="font-semibold text-gray-700">پایگاه ارجاعی:</span>
-                    <span className="mr-2 text-gray-600">{getBaseName(rescuer)}</span>
+                    <span className="text-sm font-bold text-gray-800">پایگاه ارجاعی:</span>
+                    <span className="mr-2 text-red-800 text-sm">{getBaseName(rescuer)}</span>
                   </div>
                   <div>
-                    <span className="font-semibold text-gray-700">آخرین بروزرسانی:</span>
-                    <span className="mr-2 text-gray-600">{formatTime(rescuer.lastUpdate)}</span>
+                    <span className="text-sm text-gray-800 font-bold"> آخرین بروزرسانی موقعیت:</span>
+                    <span className="mr-2 text-red-800 text-sm">{formatTime(rescuer.lastUpdate)}</span>
                   </div>
                 </div>
               </div>
