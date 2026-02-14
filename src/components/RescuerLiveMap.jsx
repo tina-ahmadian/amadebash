@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import LiveLocationService from '../services/LiveLocationService';
+import { getProfilePictureUrl } from '../services/GetProfilePictureService';
 
 const defaultCenter = [35.6892, 51.3890];
 
@@ -36,21 +37,20 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
+const DEFAULT_AVATAR_URL = 'https://ui-avatars.com/api/?name=User&background=eee&color=555&size=128';
+
 // Create custom location pin icon with person for rescuers based on status color
-const createCustomIcon = (color, rescuerId) => {
-  // Map color to darker shade for the person icon
-  const darkColor = color === '#10B981' ? '#16A34A' : // green -> darker green
-                    color === '#EF4444' ? '#DC2626' : // red -> darker red
-                    color === '#F97316' ? '#EA580C' : // orange -> darker orange
-                    '#3B82F6'; // default blue
-  
+// profilePictureUrl: when provided, shows rescuer's profile picture in the pin; otherwise shows default avatar
+const createCustomIcon = (color, rescuerId, profilePictureUrl) => {
+  const imageUrl = profilePictureUrl || DEFAULT_AVATAR_URL;
+
   // Generate unique filter ID to avoid conflicts
   const filterId = `shadow-rescuer-${rescuerId}-${Math.random().toString(36).substr(2, 9)}`;
   
   // Create HTML element for custom icon with photo circle and arrow
   const html = `
     <div class="custom-rescuer-marker-wrapper" data-rescuer-id="${rescuerId}" style="position: relative; width: 48px; height: 100px; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
-      <!-- Photo circle at top -->
+      <!-- Photo circle at top - profile picture or default avatar -->
       <div style="position: relative; z-index: 10; pointer-events: auto;">
         <div style="
           width: 40px;
@@ -62,10 +62,8 @@ const createCustomIcon = (color, rescuerId) => {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
-          font-weight: bold;
-          font-size: 16px;
-        ">👤</div>
+          overflow: hidden;
+        "><img src="${imageUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" /></div>
         <!-- Arrow button -->
         <div 
           class="arrow-btn-rescuer" 
@@ -182,6 +180,7 @@ const RescuerLiveMap = () => {
   const [center, setCenter] = useState(defaultCenter);
   const [error, setError] = useState(null);
   const [showMockData, setShowMockData] = useState(false);
+  const [profilePictures, setProfilePictures] = useState({});
   const markerRefs = useRef({});
 
   // Mock data for demonstration
@@ -373,6 +372,25 @@ const RescuerLiveMap = () => {
 
     fetchResponders();
   }, []);
+
+  // Fetch profile pictures for rescuers so pin icons show their photo
+  useEffect(() => {
+    const fetchProfilePictures = async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token || rescuers.length === 0) return;
+      const next = {};
+      await Promise.all(
+        rescuers.map(async (rescuer) => {
+          if (rescuer.id) {
+            const url = await getProfilePictureUrl(rescuer.id.toString(), token);
+            if (url) next[rescuer.id] = url;
+          }
+        })
+      );
+      setProfilePictures((prev) => ({ ...prev, ...next }));
+    };
+    fetchProfilePictures();
+  }, [rescuers]);
 
   // Fetch bases on mount
   useEffect(() => {
@@ -841,7 +859,7 @@ const RescuerLiveMap = () => {
               }
             }}
             position={[parseFloat(rescuer.latitude), parseFloat(rescuer.longitude)]}
-            icon={createCustomIcon(getMarkerColor(rescuer.status), rescuer.id)}
+            icon={createCustomIcon(getMarkerColor(rescuer.status), rescuer.id, profilePictures[rescuer.id])}
             eventHandlers={{
               click: () => {
                 // Open popup on marker click
@@ -857,7 +875,14 @@ const RescuerLiveMap = () => {
               closeButton={true}
             >
               <div className="p-3 bg-gray-700 rounded-lg" dir="rtl" style={{ minWidth: '200px', maxWidth: '250px'}}>
-                <h3 className="text-xl text-base mb-3 text-white border-b pb-2 mt-4">{rescuer.name}</h3>
+                <div className="flex items-center gap-2 border-b pb-2 mt-4">
+                  <img
+                    src={profilePictures[rescuer.id] || DEFAULT_AVATAR_URL}
+                    alt=""
+                    className="w-10 h-10 rounded-full object-cover border-2 border-white flex-shrink-0"
+                  />
+                  <h3 className="text-xl text-base text-white">{rescuer.name}</h3>
+                </div>
                 <div className="space-y-2.5 text-md bg-red-100 px-2">
                   <div>
                     <span className="text-sm font-bold text-gray-800">پایگاه ارجاعی:</span>

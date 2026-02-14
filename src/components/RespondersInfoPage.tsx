@@ -321,22 +321,16 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
         return 'deactive'; // default
       };
 
-      // Format phone number to international format
-      const formatPhoneNumber = (phone: string): string => {
-        const cleanPhone = phone.trim().replace(/\s/g, '');
-        // اگر با + شروع می‌شود، همان را برگردان
-        if (cleanPhone.startsWith('+')) {
-          return cleanPhone;
-        }
-        // در غیر این صورت + را اضافه کن
-        return '+' + cleanPhone;
+      // Normalize phone number: trim and remove spaces only (no prefix added)
+      const normalizePhoneNumber = (phone: string): string => {
+        return phone.trim().replace(/\s/g, '');
       };
 
       // Prepare API payload
       const payload = {
         name: newResponder.name.trim(),
         gender: newResponder.gender,
-        phone_number: formatPhoneNumber(newResponder.phone),
+        phone_number: normalizePhoneNumber(newResponder.phone),
         organization_code: newResponder.organizationalCode.trim(),
         iranian_identity_code: newResponder.nationalId.trim(),
         expert_category: newResponder.expertCategory,
