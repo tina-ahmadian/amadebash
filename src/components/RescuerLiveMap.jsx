@@ -37,6 +37,22 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
+// Fly to a position when it's set (e.g. latest accepted rescuer)
+const FOCUS_ZOOM = 16;
+const FocusOnPosition = ({ focusPosition, onFocused }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!focusPosition || !focusPosition.lat || !focusPosition.lng) return;
+    const lat = parseFloat(focusPosition.lat);
+    const lng = parseFloat(focusPosition.lng);
+    if (isNaN(lat) || isNaN(lng)) return;
+    map.flyTo([lat, lng], FOCUS_ZOOM, { animate: true, duration: 0.6 });
+    const t = setTimeout(() => { onFocused?.(); }, 700);
+    return () => clearTimeout(t);
+  }, [focusPosition, map, onFocused]);
+  return null;
+};
+
 const DEFAULT_AVATAR_URL = 'https://ui-avatars.com/api/?name=User&background=eee&color=555&size=128';
 
 // Create custom location pin icon with person for rescuers based on status color
@@ -181,7 +197,9 @@ const RescuerLiveMap = () => {
   const [error, setError] = useState(null);
   const [showMockData, setShowMockData] = useState(false);
   const [profilePictures, setProfilePictures] = useState({});
+  const [focusOnPosition, setFocusOnPosition] = useState(null);
   const markerRefs = useRef({});
+  const prevIncidentsRef = useRef(null);
 
   // Mock data for demonstration
   const loadMockData = () => {
@@ -428,50 +446,48 @@ const RescuerLiveMap = () => {
     fetchBases();
   }, []);
 
-  // Fetch incidents/accidents on mount
-  useEffect(() => {
-    const fetchIncidents = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          console.error('[RescuerLiveMap] No auth token for fetching incidents');
-          return;
-        }
+  // Fetch incidents/accidents (used on mount and for polling)
+  const fetchIncidents = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
 
-        const response = await fetch('/apis/rescue-link/v1/accidents', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+      const response = await fetch('/apis/rescue-link/v1/accidents', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('[RescuerLiveMap] Incidents API Response:', data);
-          
-          // Handle different possible response structures
-          let incidentsData = [];
-          if (data.success && Array.isArray(data.data)) {
-            incidentsData = data.data;
-          } else if (Array.isArray(data)) {
-            incidentsData = data;
-          } else if (data.data && Array.isArray(data.data)) {
-            incidentsData = data.data;
-          }
-          
-          console.log('[RescuerLiveMap] Incidents loaded:', incidentsData);
-          setIncidents(incidentsData);
-        } else {
-          console.error('[RescuerLiveMap] Failed to fetch incidents:', response.status);
-        }
-      } catch (error) {
-        console.error('[RescuerLiveMap] Error fetching incidents:', error);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      let incidentsData = [];
+      if (data.success && Array.isArray(data.data)) {
+        incidentsData = data.data;
+      } else if (Array.isArray(data)) {
+        incidentsData = data;
+      } else if (data.data && Array.isArray(data.data)) {
+        incidentsData = data.data;
       }
-    };
-
-    fetchIncidents();
+      setIncidents(incidentsData);
+    } catch (error) {
+      console.error('[RescuerLiveMap] Error fetching incidents:', error);
+    }
   }, []);
+
+  // Fetch incidents on mount
+  useEffect(() => {
+    fetchIncidents();
+  }, [fetchIncidents]);
+
+  // Poll incidents so we see when a rescuer accepts an accident
+  const INCIDENT_POLL_INTERVAL_MS = 8000;
+  useEffect(() => {
+    const interval = setInterval(fetchIncidents, INCIDENT_POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [fetchIncidents]);
 
   useEffect(() => {
     console.log('[RescuerLiveMap] Component mounted, starting location stream...');
@@ -522,6 +538,37 @@ const RescuerLiveMap = () => {
       setCenter([avgLat, avgLng]);
     }
   }, [rescuers]);
+
+  // When incidents update, detect if a rescuer just accepted an accident and focus map on them
+  useEffect(() => {
+    if (!incidents || incidents.length === 0) return;
+    const prev = prevIncidentsRef.current;
+
+    for (const inc of incidents) {
+      const accepted = inc.accepted_responders || inc.acceptedResponders || [];
+      const prevInc = prev?.find((p) => p.id?.toString() === inc.id?.toString());
+      const prevAccepted = prevInc?.accepted_responders || [];
+      if (accepted.length > prevAccepted.length) {
+        const latestAcceptedId = accepted[accepted.length - 1]?.toString?.() ?? String(accepted[accepted.length - 1]);
+        const rescuer = rescuers.find((r) => r.id?.toString() === latestAcceptedId);
+        let lat = rescuer ? parseFloat(rescuer.latitude) : NaN;
+        let lng = rescuer ? parseFloat(rescuer.longitude) : NaN;
+        if ((!rescuer || isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) && (inc.latitude != null && inc.longitude != null)) {
+          lat = parseFloat(inc.latitude);
+          lng = parseFloat(inc.longitude);
+        }
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+          setFocusOnPosition({ lat, lng });
+        }
+        break;
+      }
+    }
+
+    prevIncidentsRef.current = incidents.map((inc) => ({
+      id: inc.id,
+      accepted_responders: inc.accepted_responders || inc.acceptedResponders || [],
+    }));
+  }, [incidents, rescuers]);
 
   const getStatusLabel = (status) => {
     const labels = {
@@ -828,6 +875,10 @@ const RescuerLiveMap = () => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <MapUpdater center={center} />
+        <FocusOnPosition
+          focusPosition={focusOnPosition}
+          onFocused={() => setFocusOnPosition(null)}
+        />
         
         {/* Draw connection lines between bases and accepted rescuers */}
         {connectionLines.map((line) => (
@@ -852,7 +903,7 @@ const RescuerLiveMap = () => {
           })
           .map((rescuer) => (
           <Marker
-            key={rescuer.id}
+            key={`rescuer-${rescuer.id}-${profilePictures[rescuer.id] != null ? 'img' : 'def'}`}
             ref={(ref) => {
               if (ref) {
                 markerRefs.current[rescuer.id] = ref;

@@ -3,7 +3,10 @@ import { Search, User, Phone, MapPin, Shield, CheckCircle, XCircle, Clock, Plus,
 import { Responder, ResponderStatus, Base } from '../data/mockData';
 import { useMapContext } from '../context/MapContext';
 import { API_BASE_URL } from '../services/apiConfig';
+import { getProfilePictureUrl as fetchProfilePictureUrl } from '../services/GetProfilePictureService';
 import ProfilePictureUploadModal from './ProfilePictureUploadModal';
+
+const DEFAULT_AVATAR_URL = 'https://ui-avatars.com/api/?name=User&background=eee&color=555&size=128';
 
 const expertCategoryOptions = [
   { value: '', label: 'انتخاب کنید' },
@@ -62,6 +65,9 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
   const createFormFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetched profile picture URLs (blob or URL) per rescuer id – loaded when page/rescuer list loads
+  const [profilePictures, setProfilePictures] = useState<Record<string, string>>({});
 
   // Fetch bases from API
   const fetchBases = async () => {
@@ -191,6 +197,25 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
     fetchBases();
     fetchResponders();
   }, []);
+
+  // When rescuer list loads, fetch each rescuer's profile picture from the server
+  useEffect(() => {
+    const loadProfilePictures = async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token || responderList.length === 0) return;
+      const next: Record<string, string> = {};
+      await Promise.all(
+        responderList.map(async (responder) => {
+          if (responder.id) {
+            const url = await fetchProfilePictureUrl(responder.id, token);
+            if (url) next[responder.id] = url;
+          }
+        })
+      );
+      setProfilePictures((prev) => ({ ...prev, ...next }));
+    };
+    loadProfilePictures();
+  }, [responderList]);
 
   const filteredResponders = useMemo(() => {
     if (!searchQuery.trim()) return responderList;
@@ -535,6 +560,10 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
       const token = localStorage.getItem('authToken') || '';
       await updateProfilePicture(selectedResponder.id, file, token);
       setUploadSuccessMessage('عکس پروفایل با موفقیت تغییر کرد');
+      const newUrl = await fetchProfilePictureUrl(selectedResponder.id, token);
+      if (newUrl) {
+        setProfilePictures((prev) => ({ ...prev, [selectedResponder.id]: newUrl }));
+      }
       await fetchResponders();
       setModalOpen(false);
     } catch (error) {
@@ -985,16 +1014,14 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
               >
                 <div className="flex flex-row-reverse items-start justify-between mb-4 gap-4">
                   <div className="flex flex-row-reverse items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                      {/* Show profile image if available, fallback to icon */}
+                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                      {/* Profile image from server (fetched on load) or default avatar */}
                       <img
-                        src={getProfilePictureUrl(responder.id)}
-                        alt="Profile"
+                        src={profilePictures[responder.id] || DEFAULT_AVATAR_URL}
+                        alt=""
                         className="w-12 h-12 rounded-full object-cover border border-gray-300"
-                        onError={e => { e.currentTarget.style.display = 'none'; }}
-                        style={{ background: '#fff' }}
+                        onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR_URL; }}
                       />
-                      <User className="w-6 h-6 text-red-600 absolute top-0 left-0 right-0 bottom-0 m-auto" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-800">{responder.name}</h3>
