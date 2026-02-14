@@ -4,6 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import LiveLocationService from '../services/LiveLocationService';
 import { getProfilePictureUrl as fetchProfilePictureUrl } from '../services/GetProfilePictureService';
+import tokenManager from '../services/TokenManager';
 
 const defaultCenter = [35.6892, 51.3890];
 
@@ -59,6 +60,7 @@ const DEFAULT_AVATAR_URL = 'https://ui-avatars.com/api/?name=User&background=eee
 // profilePictureUrl: when provided, shows rescuer's profile picture in the pin; otherwise shows default avatar
 const createCustomIcon = (color, rescuerId, profilePictureUrl) => {
   const imageUrl = profilePictureUrl || DEFAULT_AVATAR_URL;
+  const fallbackSrc = DEFAULT_AVATAR_URL.replace(/"/g, '&quot;').replace(/&/g, '&amp;');
 
   // Generate unique filter ID to avoid conflicts
   const filterId = `shadow-rescuer-${rescuerId}-${Math.random().toString(36).substr(2, 9)}`;
@@ -79,7 +81,7 @@ const createCustomIcon = (color, rescuerId, profilePictureUrl) => {
           align-items: center;
           justify-content: center;
           overflow: hidden;
-        "><img src="${imageUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" /></div>
+        "><img src="${imageUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" onerror="this.onerror=null;this.src=&quot;${fallbackSrc}&quot;" /></div>
         <!-- Arrow button -->
         <div 
           class="arrow-btn-rescuer" 
@@ -395,8 +397,14 @@ const RescuerLiveMap = () => {
   // picture from the server if it exists — same approach as the rescuers list (RespondersInfoPage).
   useEffect(() => {
     const loadProfilePictures = async () => {
-      const token = localStorage.getItem('authToken');
-      if (!token || rescuers.length === 0) return;
+      const token = tokenManager.getAccessToken() || localStorage.getItem('authToken');
+      if (!token) {
+        if (rescuers.length > 0) {
+          console.warn('[RescuerLiveMap] No auth token available; profile pictures will not load. Log in again if needed.');
+        }
+        return;
+      }
+      if (rescuers.length === 0) return;
       const next = {};
       await Promise.all(
         rescuers.map(async (rescuer) => {
