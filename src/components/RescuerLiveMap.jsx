@@ -391,7 +391,7 @@ const RescuerLiveMap = () => {
     fetchResponders();
   }, []);
 
-  // Fetch profile pictures for rescuers so pin icons show their photo
+  // Fetch profile pictures for rescuers so pin icons show their photo (use string id for consistent lookup)
   useEffect(() => {
     const fetchProfilePictures = async () => {
       const token = localStorage.getItem('authToken');
@@ -399,12 +399,16 @@ const RescuerLiveMap = () => {
       const next = {};
       await Promise.all(
         rescuers.map(async (rescuer) => {
-          if (rescuer.id) {
-            const url = await getProfilePictureUrl(rescuer.id.toString(), token);
-            if (url) next[rescuer.id] = url;
-          }
+          const id = rescuer.id != null ? rescuer.id.toString() : null;
+          if (!id) return;
+          const url = await getProfilePictureUrl(id, token);
+          if (url) next[id] = url;
         })
       );
+      const loaded = Object.keys(next).length;
+      if (loaded > 0 || rescuers.length > 0) {
+        console.log('[RescuerLiveMap] Profile pictures loaded:', loaded, 'of', rescuers.length, 'rescuers');
+      }
       setProfilePictures((prev) => ({ ...prev, ...next }));
     };
     fetchProfilePictures();
@@ -903,14 +907,14 @@ const RescuerLiveMap = () => {
           })
           .map((rescuer) => (
           <Marker
-            key={`rescuer-${rescuer.id}-${profilePictures[rescuer.id] != null ? 'img' : 'def'}`}
+            key={`rescuer-${rescuer.id}-${profilePictures[rescuer.id?.toString()] != null ? 'img' : 'def'}`}
             ref={(ref) => {
               if (ref) {
                 markerRefs.current[rescuer.id] = ref;
               }
             }}
             position={[parseFloat(rescuer.latitude), parseFloat(rescuer.longitude)]}
-            icon={createCustomIcon(getMarkerColor(rescuer.status), rescuer.id, profilePictures[rescuer.id])}
+            icon={createCustomIcon(getMarkerColor(rescuer.status), rescuer.id, profilePictures[rescuer.id?.toString()])}
             eventHandlers={{
               click: () => {
                 // Open popup on marker click
@@ -928,7 +932,7 @@ const RescuerLiveMap = () => {
               <div className="p-3 bg-gray-700 rounded-lg" dir="rtl" style={{ minWidth: '200px', maxWidth: '250px'}}>
                 <div className="flex items-center gap-2 border-b pb-2 mt-4">
                   <img
-                    src={profilePictures[rescuer.id] || DEFAULT_AVATAR_URL}
+                    src={profilePictures[rescuer.id?.toString()] || DEFAULT_AVATAR_URL}
                     alt=""
                     className="w-10 h-10 rounded-full object-cover border-2 border-white flex-shrink-0"
                   />
