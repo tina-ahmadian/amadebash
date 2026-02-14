@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import LiveLocationService from '../services/LiveLocationService';
-import { getProfilePictureUrl } from '../services/GetProfilePictureService';
+import { getProfilePictureUrl as fetchProfilePictureUrl } from '../services/GetProfilePictureService';
 
 const defaultCenter = [35.6892, 51.3890];
 
@@ -391,9 +391,10 @@ const RescuerLiveMap = () => {
     fetchResponders();
   }, []);
 
-  // Fetch profile pictures for rescuers so pin icons show their photo (use string id for consistent lookup)
+  // When live map comes up (and whenever rescuers list changes), download each rescuer's profile
+  // picture from the server if it exists — same approach as the rescuers list (RespondersInfoPage).
   useEffect(() => {
-    const fetchProfilePictures = async () => {
+    const loadProfilePictures = async () => {
       const token = localStorage.getItem('authToken');
       if (!token || rescuers.length === 0) return;
       const next = {};
@@ -401,17 +402,13 @@ const RescuerLiveMap = () => {
         rescuers.map(async (rescuer) => {
           const id = rescuer.id != null ? rescuer.id.toString() : null;
           if (!id) return;
-          const url = await getProfilePictureUrl(id, token);
+          const url = await fetchProfilePictureUrl(id, token);
           if (url) next[id] = url;
         })
       );
-      const loaded = Object.keys(next).length;
-      if (loaded > 0 || rescuers.length > 0) {
-        console.log('[RescuerLiveMap] Profile pictures loaded:', loaded, 'of', rescuers.length, 'rescuers');
-      }
       setProfilePictures((prev) => ({ ...prev, ...next }));
     };
-    fetchProfilePictures();
+    loadProfilePictures();
   }, [rescuers]);
 
   // Fetch bases on mount
