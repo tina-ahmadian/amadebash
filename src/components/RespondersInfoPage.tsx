@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Search, User, Phone, MapPin, Shield, CheckCircle, XCircle, Clock, Plus, X, AlertCircle, ChevronDown, Trash2, Copy } from 'lucide-react';
+import { Search, User, Phone, MapPin, Shield, CheckCircle, XCircle, Clock, Plus, X, AlertCircle, ChevronDown, Trash2, Copy, Camera } from 'lucide-react';
 import { Responder, ResponderStatus, Base } from '../data/mockData';
 import { useMapContext } from '../context/MapContext';
 import { API_BASE_URL } from '../services/apiConfig';
@@ -57,6 +57,11 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
   const [selectedResponder, setSelectedResponder] = useState<Responder | null>(null);
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null);
   const [uploadLoading, setUploadLoading] = useState(false);
+
+  // Create rescuer form: optional profile picture
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
+  const createFormFileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch bases from API
   const fetchBases = async () => {
@@ -221,6 +226,15 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
       password: ''
     });
     setFormErrors({});
+    // Clear profile picture and revoke preview URL
+    if (profilePicturePreview) {
+      URL.revokeObjectURL(profilePicturePreview);
+    }
+    setProfilePictureFile(null);
+    setProfilePicturePreview(null);
+    if (createFormFileInputRef.current) {
+      createFormFileInputRef.current.value = '';
+    }
   };
 
   // Expert Category Dropdown handlers
@@ -335,14 +349,26 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
 
       console.log('Creating new rescuer with payload:', payload);
 
-      // Call API
+      // POST /rescuers with individual form fields + optional profile picture
+      const formData = new FormData();
+      formData.append('name', payload.name);
+      formData.append('gender', payload.gender);
+      formData.append('phone_number', payload.phone_number);
+      formData.append('organization_code', payload.organization_code);
+      formData.append('iranian_identity_code', payload.iranian_identity_code);
+      formData.append('expert_category', payload.expert_category);
+      formData.append('age', String(payload.age));
+      formData.append('password', payload.password);
+      formData.append('status', payload.status);
+      if (payload.base_id) formData.append('base_id', payload.base_id);
+      if (payload.fcm_token) formData.append('fcm_token', payload.fcm_token);
+      if (profilePictureFile) {
+        formData.append('file', profilePictureFile);
+      }
       const response = await fetch(`${API_BASE_URL}/rescuers`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
       });
 
       console.log('Create rescuer API Response Status:', response.status);
@@ -615,6 +641,57 @@ const RespondersInfoPage: React.FC<RespondersInfoPageProps> = ({ responders }) =
               onSubmit={handleAddResponder}
               className="p-6 space-y-4 text-right overflow-y-auto max-h-[90vh]"
             >
+
+              {/* Upload profile picture - optional when creating rescuer */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <label className="block text-md font-medium text-gray-700 shrink-0">:عکس پروفایل</label>
+                <div className="flex items-center gap-3 flex-1 w-full sm:w-auto">
+                  <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gray-200 border-2 border-gray-300 flex items-center justify-center shrink-0">
+                    {profilePicturePreview ? (
+                      <img src={profilePicturePreview} alt="پیش‌نمایش" className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera className="w-8 h-8 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <input
+                      ref={createFormFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (profilePicturePreview) URL.revokeObjectURL(profilePicturePreview);
+                          setProfilePictureFile(file);
+                          setProfilePicturePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => createFormFileInputRef.current?.click()}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      انتخاب عکس
+                    </button>
+                    {profilePictureFile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (profilePicturePreview) URL.revokeObjectURL(profilePicturePreview);
+                          setProfilePictureFile(null);
+                          setProfilePicturePreview(null);
+                          if (createFormFileInputRef.current) createFormFileInputRef.current.value = '';
+                        }}
+                        className="px-3 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        حذف عکس
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM node:20-alpine AS builder
+FROM node:24-alpine3.22 AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve with a static server
-FROM node:20-alpine
+FROM node:24-alpine3.22
 WORKDIR /app
 RUN npm install -g serve
 COPY --from=builder /app/dist ./dist
