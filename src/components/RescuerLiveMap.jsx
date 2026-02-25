@@ -6,7 +6,8 @@ import LiveLocationService from '../services/LiveLocationService';
 import { getProfilePictureUrl as fetchProfilePictureUrl } from '../services/GetProfilePictureService';
 import tokenManager from '../services/TokenManager';
 
-const defaultCenter = [35.6892, 51.3890];
+// Default center: Isfahan (to avoid centering on ocean on first load)
+const defaultCenter = [32.6539, 51.6660];
 
 const getMarkerColor = (status) => {
   const colors = {
