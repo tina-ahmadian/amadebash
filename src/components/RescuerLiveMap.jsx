@@ -673,109 +673,127 @@ const RescuerLiveMap = () => {
   const connectionLines = useMemo(() => {
     const lines = [];
     
-    // If showing mock data, connect each rescuer to nearest base
-    if (showMockData && bases.length > 0) {
-      rescuers.forEach((rescuer) => {
-        if (!rescuer.latitude || !rescuer.longitude) return;
-        
-        const rescuerLat = parseFloat(rescuer.latitude);
-        const rescuerLng = parseFloat(rescuer.longitude);
-        
-        if (isNaN(rescuerLat) || isNaN(rescuerLng) || rescuerLat === 0 || rescuerLng === 0) {
+    // Helper: find the best base for a rescuer (by explicit baseId first, then nearest base)
+    const findBaseForRescuer = (rescuer) => {
+      if (!bases || bases.length === 0) return null;
+
+      const rescuerLat = parseFloat(rescuer.latitude);
+      const rescuerLng = parseFloat(rescuer.longitude);
+
+      if (isNaN(rescuerLat) || isNaN(rescuerLng) || rescuerLat === 0 || rescuerLng === 0) {
+        return null;
+      }
+
+      // 1) Try to use explicit baseId mapping if available
+      if (rescuer.baseId) {
+        const mappedBase = bases.find(
+          (b) => b.id?.toString() === rescuer.baseId?.toString()
+        );
+        if (mappedBase && mappedBase.latitude && mappedBase.longitude) {
+          return { base: mappedBase, rescuerLat, rescuerLng };
+        }
+      }
+
+      // 2) Fallback to nearest base (same behaviour as mock mode)
+      let nearestBase = null;
+      let minDistance = Infinity;
+
+      bases.forEach((base) => {
+        if (!base.latitude || !base.longitude) return;
+
+        const baseLat = parseFloat(base.latitude);
+        const baseLng = parseFloat(base.longitude);
+
+        if (isNaN(baseLat) || isNaN(baseLng) || baseLat === 0 || baseLng === 0) {
           return;
         }
-        
-        // Find nearest base
-        let nearestBase = null;
-        let minDistance = Infinity;
-        
-        bases.forEach((base) => {
-          if (!base.latitude || !base.longitude) return;
-          
-          const baseLat = parseFloat(base.latitude);
-          const baseLng = parseFloat(base.longitude);
-          
-          if (isNaN(baseLat) || isNaN(baseLng) || baseLat === 0 || baseLng === 0) {
-            return;
-          }
-          
-          const distance = calculateDistance(rescuerLat, rescuerLng, baseLat, baseLng);
-          if (distance < minDistance) {
-            minDistance = distance;
-            nearestBase = base;
-          }
-        });
-        
-        // Create curved line from rescuer to nearest base
-        if (nearestBase) {
-          const baseLat = parseFloat(nearestBase.latitude);
-          const baseLng = parseFloat(nearestBase.longitude);
-          
-          const startPoint = [baseLat, baseLng];
-          const endPoint = [rescuerLat, rescuerLng];
-          const curvedPoints = createCurvedLine(startPoint, endPoint);
-          
-          lines.push({
-            id: `mock-${rescuer.id}-${nearestBase.id}`,
-            positions: curvedPoints,
-            baseId: nearestBase.id,
-            rescuerId: rescuer.id,
-            incidentId: 'mock'
-          });
+
+        const distance = calculateDistance(rescuerLat, rescuerLng, baseLat, baseLng);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestBase = base;
         }
       });
-    } else {
-      // For real data, use incidents with base_id and accepted_responders
-      incidents.forEach((incident) => {
-        const baseId = incident.base_id || incident.baseId;
-        const acceptedResponderIds = incident.accepted_responders || incident.acceptedResponders || [];
-        
-        if (!baseId || !acceptedResponderIds || acceptedResponderIds.length === 0) {
-          return;
-        }
-        
-        // Find the base
-        const base = bases.find(b => b.id?.toString() === baseId?.toString());
-        if (!base || !base.latitude || !base.longitude) {
-          return;
-        }
-        
-        const basePosition = [parseFloat(base.latitude), parseFloat(base.longitude)];
-        
-        // For each accepted rescuer, create a line
-        acceptedResponderIds.forEach((rescuerId) => {
-          const rescuer = rescuers.find(r => {
-            const rId = r.id?.toString();
-            const acceptedId = rescuerId?.toString();
-            return rId === acceptedId;
-          });
-          
-          if (rescuer && rescuer.latitude && rescuer.longitude) {
-            const rescuerLat = parseFloat(rescuer.latitude);
-            const rescuerLng = parseFloat(rescuer.longitude);
-            
-            // Only add line if coordinates are valid
-            if (!isNaN(rescuerLat) && !isNaN(rescuerLng) && rescuerLat !== 0 && rescuerLng !== 0) {
-              const startPoint = basePosition;
-              const endPoint = [rescuerLat, rescuerLng];
-              const curvedPoints = createCurvedLine(startPoint, endPoint);
-              
-              lines.push({
-                id: `${incident.id}-${rescuerId}`,
-                positions: curvedPoints,
-                baseId: base.id,
-                rescuerId: rescuer.id,
-                incidentId: incident.id
-              });
-            }
-          }
+
+      if (!nearestBase) return null;
+
+      return { base: nearestBase, rescuerLat, rescuerLng };
+    };
+
+    // 1) Always connect each rescuer to یک پایگاه (هم در داده‌های نمونه، هم داده واقعی)
+    if (bases.length > 0) {
+      rescuers.forEach((rescuer) => {
+        if (!rescuer || !rescuer.latitude || !rescuer.longitude) return;
+
+        const result = findBaseForRescuer(rescuer);
+        if (!result) return;
+
+        const { base, rescuerLat, rescuerLng } = result;
+        const baseLat = parseFloat(base.latitude);
+        const baseLng = parseFloat(base.longitude);
+
+        const startPoint = [baseLat, baseLng];
+        const endPoint = [rescuerLat, rescuerLng];
+        const curvedPoints = createCurvedLine(startPoint, endPoint);
+
+        lines.push({
+          id: `base-${base.id}-rescuer-${rescuer.id}`,
+          positions: curvedPoints,
+          baseId: base.id,
+          rescuerId: rescuer.id,
+          incidentId: null
         });
       });
     }
+
+    // 2) اگر حادثه‌ای ثبت و توسط امدادگر پذیرفته شد، روی همان مسیر یک خط (با همان رنگ) باقی می‌ماند
+    //    (ساختار قبلی را نگه می‌داریم تا در صورت استفاده‌ی بعدی از incidentId مشکلی نباشد)
+    incidents.forEach((incident) => {
+      const baseId = incident.base_id || incident.baseId;
+      const acceptedResponderIds = incident.accepted_responders || incident.acceptedResponders || [];
+
+      if (!baseId || !acceptedResponderIds || acceptedResponderIds.length === 0) {
+        return;
+      }
+
+      const base = bases.find(b => b.id?.toString() === baseId?.toString());
+      if (!base || !base.latitude || !base.longitude) {
+        return;
+      }
+
+      const basePosition = [parseFloat(base.latitude), parseFloat(base.longitude)];
+
+      acceptedResponderIds.forEach((rescuerId) => {
+        const rescuer = rescuers.find(r => {
+          const rId = r.id?.toString();
+          const acceptedId = rescuerId?.toString();
+          return rId === acceptedId;
+        });
+
+        if (rescuer && rescuer.latitude && rescuer.longitude) {
+          const rescuerLat = parseFloat(rescuer.latitude);
+          const rescuerLng = parseFloat(rescuer.longitude);
+
+          if (!isNaN(rescuerLat) && !isNaN(rescuerLng) && rescuerLat !== 0 && rescuerLng !== 0) {
+            const startPoint = basePosition;
+            const endPoint = [rescuerLat, rescuerLng];
+            const curvedPoints = createCurvedLine(startPoint, endPoint);
+
+            lines.push({
+              id: `${incident.id}-${rescuerId}`,
+              positions: curvedPoints,
+              baseId: base.id,
+              rescuerId: rescuer.id,
+              incidentId: incident.id
+            });
+          }
+        }
+      });
+    });
     
     console.log('[RescuerLiveMap] Connection lines:', lines);
     return lines;
-  }, [incidents, bases, rescuers, showMockData]);
+  }, [incidents, bases, rescuers]);
 
   return (
     <div className="w-full h-full relative">
