@@ -195,7 +195,7 @@ const RescuerLiveMap = () => {
   const [rescuers, setRescuers] = useState([]);
   const [bases, setBases] = useState([]);
   const [incidents, setIncidents] = useState([]);
-  const [center, setCenter] = useState(defaultCenter);
+  const [center] = useState(defaultCenter);
   const [error, setError] = useState(null);
   const [showMockData, setShowMockData] = useState(false);
   const [profilePictures, setProfilePictures] = useState({});
@@ -313,9 +313,19 @@ const RescuerLiveMap = () => {
         console.log('[RescuerLiveMap] Total rescuers after update:', updated.length);
         return updated;
       } else {
-        // New user not found in registered rescuers list – skip adding to map
-        console.log('[RescuerLiveMap] Rescuer not found, skipping:', idStr);
-        return prev;
+        // Add new rescuer pin without auto-focusing the map
+        const newRescuer = {
+          id: idStr || `${Date.now()}-${Math.random()}`,
+          name: data.name || 'امدادگر',
+          latitude: data.latitude || data.lat || 0,
+          longitude: data.longitude || data.lng || 0,
+          status: data.status || 'active',
+          lastUpdate: data.timestamp || data.last_update || new Date().toISOString(),
+          baseId: data.base_id || data.baseId || null,
+          baseName: data.base_name || data.baseName || null,
+        };
+        console.log('[RescuerLiveMap] Added new rescuer:', newRescuer);
+        return [...prev, newRescuer];
       }
     });
   }, []);
@@ -526,14 +536,6 @@ const RescuerLiveMap = () => {
       clearTimeout(timeoutId);
       document.removeEventListener('click', handleArrowClick, true);
     };
-  }, [rescuers]);
-
-  useEffect(() => {
-    if (rescuers.length > 0) {
-      const avgLat = rescuers.reduce((sum, r) => sum + parseFloat(r.latitude), 0) / rescuers.length;
-      const avgLng = rescuers.reduce((sum, r) => sum + parseFloat(r.longitude), 0) / rescuers.length;
-      setCenter([avgLat, avgLng]);
-    }
   }, [rescuers]);
 
   // When incidents update, detect if a rescuer just accepted an accident and focus map on them
