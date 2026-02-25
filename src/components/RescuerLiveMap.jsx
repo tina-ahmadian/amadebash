@@ -313,21 +313,9 @@ const RescuerLiveMap = () => {
         console.log('[RescuerLiveMap] Total rescuers after update:', updated.length);
         return updated;
       } else {
-        // Add new rescuer if not found
-        const newRescuer = {
-          id: idStr || `${Date.now()}-${Math.random()}`,
-          name: data.name || 'امدادگر',
-          latitude: data.latitude || data.lat || 0,
-          longitude: data.longitude || data.lng || 0,
-          status: data.status || 'active',
-          lastUpdate: data.timestamp || data.last_update || new Date().toISOString(),
-          baseId: data.base_id || data.baseId || null,
-          baseName: data.base_name || data.baseName || null,
-        };
-        console.log('[RescuerLiveMap] Added new rescuer:', newRescuer);
-        const newList = [...prev, newRescuer];
-        console.log('[RescuerLiveMap] Total rescuers after adding:', newList.length);
-        return newList;
+        // New user not found in registered rescuers list – skip adding to map
+        console.log('[RescuerLiveMap] Rescuer not found, skipping:', idStr);
+        return prev;
       }
     });
   }, []);
