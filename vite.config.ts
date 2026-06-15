@@ -10,11 +10,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': {
-        target: 'http://87.107.174.39',
+      '/apis/rescue-link': {
+        target: 'https://rohamprojects.ir',
         changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path,
+        secure: true,
       },
     },
   },
